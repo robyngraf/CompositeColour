@@ -43,18 +43,40 @@
                     const row = monoBuffer[y] = [];
                     for (let x = 0; x < width; x++) {
                         const idx = (y * width + x) * 4;
-                        const r = imgData.data[idx];
-                        const g = imgData.data[idx + 1];
-                        const b = imgData.data[idx + 2];
-                        const color = [r,g,b];
+                        const rImg = imgData.data[idx];
+                        const gImg = imgData.data[idx + 1];
+                        const bImg = imgData.data[idx + 2];
+                        const color = [rImg,gImg,bImg];
                         const phase = x % 3;
                         const phase2 = (x + 1) % 3;
                         const phase3 = (x + 2) % 3;
                         let result;
-                        if (rowPhase) {
-                            result = (color[phase2] + color[phase3]) > 255;
-                        } else {
-                            result = color[phase] > 127;
+
+                        let maxDist = Number.MAX_SAFE_INTEGER;
+                        for (let w = 0; w < 64; w++) {
+                            const r = w & 0b1 ? 1 : 0;
+                            const g = w & 0b10 ? 1 : 0;
+                            const b = w & 0b100 ? 1 : 0;
+                            const c = w & 0b1000 ? 1 : 0;
+                            const m = w & 0b10000 ? 1 : 0;
+                            const y = w & 0b100000 ? 1 : 0;
+
+                            const testColour = [];
+                            testColour[0] = 128 * r + 64 * m + 64 * y;
+                            testColour[1] = 128 * g + 64 * c + 64 * y;
+                            testColour[2] = 128 * b + 64 * c + 64 * m;
+
+                            const diff = [color[0] - testColour[0], color[1] - testColour[1], color[2] - testColour[2]]
+                            const dist = diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2];
+                            if (dist < maxDist) {
+                                maxDist = dist;
+
+                                if (rowPhase) {
+                                    result = [c, m, y][phase];
+                                } else {
+                                    result = [r, g, b][phase];
+                                }
+                            }
                         }
                         row[x] = result;
                     }
