@@ -9,6 +9,7 @@
 <body>
     <input type="file" id="fileInput" accept="image/png">
     <canvas id="original" style="image-rendering: pixelated;"></canvas>
+    <canvas id="bw" style="image-rendering: pixelated;"></canvas>
     <canvas id="artifact" style="image-rendering: pixelated; display: none;"></canvas>
     <canvas id="blur" style="image-rendering: pixelated;"></canvas>
 
@@ -49,10 +50,32 @@
                         row[x] = (gray > 127 || max > 200) ? 1 : 0; // threshold
                     }
                 }
-
+                renderBw(monoBuffer);
                 renderArtifactColors(monoBuffer);
             };
             img.src = URL.createObjectURL(file);
+        }
+
+        function renderBw(monoBuffer) {
+            const canvas = document.getElementById("bw");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            const imgData = ctx.createImageData(width, height);
+            const data = imgData.data;
+
+            for (let y = 0; y < height; y++) {
+                const row = monoBuffer[y];
+                for (let x = 0; x < width; x++) {
+                    const idx = (y * width + x) * 4;
+                    data[idx] = row[x] * 255;
+                    data[idx + 1] = row[x] * 255;
+                    data[idx + 2] = row[x] * 255;
+                    data[idx + 3] = 255;
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
         }
 
         function renderArtifactColors(monoBuffer) {
