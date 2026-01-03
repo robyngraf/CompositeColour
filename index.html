@@ -3,15 +3,55 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Artifact Colors Test</title>
+    <title>Artifact Colors Editor</title>
+    <style>
+        #buttonRow {
+            width: 160px;
+        }
+        #currentColourBox {
+            display: flex;
+            justify-content: center; /* Centers horizontally */
+            align-items: center;
+            width: 160px;
+            height: 80px;
+            overflow: hidden;
+            border: 1px solid black;
+            box-sizing: border-box;
+        }
+        #currentColour {
+            background: black;
+            border-radius: 200px;
+            flex-shrink: 0;
+        }
+        .colourButton {
+            width: 20px;
+            height: 20px;
+            padding: 0;
+        }
+        canvas {
+            image-rendering: pixelated;
+            zoom: 4;
+        }
+    </style>
 </head>
 
-<body>
+<body>  
     <input type="file" id="fileInput" accept="image/png">
-    <canvas id="original" style="image-rendering: pixelated;"></canvas>
-    <canvas id="bw" style="image-rendering: pixelated;"></canvas>
-    <canvas id="artifact" style="image-rendering: pixelated; display: none;"></canvas>
-    <canvas id="blur" style="image-rendering: pixelated;"></canvas>
+    <div>
+        <canvas id="original"></canvas>
+        <canvas id="bw"></canvas>
+        <canvas id="artifact" style="display: none;"></canvas>
+        <canvas id="blur"></canvas>
+    </div>
+    <div id="buttonRow"> </div>
+    <div id="currentColourBox">
+        <div id="currentColour"> </div>
+    </div>
+    <div>
+        <label for="range">Brush Size:</label>
+        <input type="range" id="radius" name="radius" min="0" max="100" value="3">
+        <span id="radius-value">50</span>
+    </div>
 
     <script>
         let width;
@@ -29,9 +69,9 @@
                 const m = w >>> 4 & 1;
                 const y = w >>> 5 & 1;
                 const colour = [
-                    128 * r + 64 * m + 64 * y,
-                    128 * g + 64 * c + 64 * y,
-                    128 * b + 64 * c + 64 * m
+                    127 * r + 64 * m + 64 * y,
+                    127 * g + 64 * c + 64 * y,
+                    127 * b + 64 * c + 64 * m
                 ];
                 const hsl = rgbToHsl(colour[0], colour[1], colour[2]);
                 colours.push({
@@ -52,6 +92,136 @@
 
         const referenceColours = colours();
 
+        function hex(value) {
+            return value.toString(16).padStart(2, '0');
+        }
+
+        function createButtons() {
+            const buttonRow = document.getElementById("buttonRow");
+            for (let i = 0; i < 64; i++) {
+                const colour = referenceColours[i];
+                const button = document.createElement('button');
+                button.className = 'colourButton';
+                button.type = 'button';
+                button.setAttribute('i', i);
+                const background = `#${hex(colour.colour[0])}${hex(colour.colour[1])}${hex(colour.colour[2])}`;
+                button.style.background = background;
+                button.onclick = onButtonClick;
+                buttonRow.appendChild(button);
+            }
+        }
+        
+        let currentColour = referenceColours[0];
+        let brushRadius = 3;
+
+        function setPreviewRadius() {
+            const slider = document.getElementById("radius");
+            const output = document.getElementById("radius-value");
+            brushRadius = parseInt(slider.value);
+            output.innerHTML = brushRadius + 1;
+            const div = document.getElementById("currentColour");
+            div.style.width = `${brushRadius * 2 + 1}px`;
+            div.style.height = `${brushRadius * 2 + 1}px`;
+        }
+
+        document.getElementById("radius").oninput = setPreviewRadius;
+        setPreviewRadius();
+
+        function onButtonClick(event) {
+            const button = event.target;
+            const i = parseInt(button.getAttribute('i'));
+            currentColour = referenceColours[i];
+            var div = document.getElementById("currentColour");
+            const background = `#${hex(currentColour.colour[0])}${hex(currentColour.colour[1])}${hex(currentColour.colour[2])}`;
+            div.style.background = background;
+            
+            var box = document.getElementById("currentColourBox");
+            box.style.background = currentColour.l >= 50 ? "black" : "white";
+        }
+
+        function onCanvasClick(event) {
+            const canvas = event.target;
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor(event.clientX - rect.left);
+            const y = Math.floor(event.clientY - rect.top);
+            
+            const v = [
+                [currentColour.r, currentColour.g, currentColour.b],
+                [currentColour.c, currentColour.m, currentColour.y],
+            ];
+            const radiusSquared = brushRadius * brushRadius;
+            for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
+                const y1 = y + y2;
+                if (y1 < 0 || y1 >= monoBuffer.length) continue;
+                const rowPhase = y1 % 2;
+                for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
+                    if (x2 * x2 + y2 * y2 > radiusSquared) continue;
+                    const x1 = x + x2;
+                    if (x1 < 0 || x1 >= monoBuffer[0].length) continue;
+                    const phase = x1 % 3;
+                    monoBuffer[y1][x1] = v[rowPhase][phase];
+                }
+            }
+            renderBw(monoBuffer);
+            renderArtifactColors(monoBuffer);
+        }
+
+        let startX;
+        let startY;
+        function onCanvasDown(event) {
+            const canvas = event.target;
+            const rect = canvas.getBoundingClientRect();
+            startX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom);
+            startY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom);
+        }
+        
+        function onCanvasUp(event) {
+            const canvas = event.target;
+            const rect = canvas.getBoundingClientRect();
+            const endX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom);
+            const endY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom);
+
+            const v = [
+                [currentColour.r, currentColour.g, currentColour.b],
+                [currentColour.c, currentColour.m, currentColour.y],
+            ];
+
+            const radiusSquared = brushRadius * brushRadius;
+
+            // if len is 0, we draw at 1 pixel
+            const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
+            for (let i = 0; i <= len; i++) {
+                const x = Math.round(startX + i * (endX - startX) / len);
+                const y = Math.round(startY + i * (endY - startY) / len);
+                for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
+                    const y1 = y + y2;
+                    if (y1 < 0 || y1 >= monoBuffer.length) continue;
+                    const rowPhase = y1 % 2;
+                    for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
+                        if (x2 * x2 + y2 * y2 > radiusSquared) continue;
+                        const x1 = x + x2;
+                        if (x1 < 0 || x1 >= monoBuffer[0].length) continue;
+                        const phase = x1 % 3;
+                        monoBuffer[y1][x1] = v[rowPhase][phase];
+                    }
+                }
+            }
+
+            
+            renderBw(monoBuffer);
+            renderArtifactColors(monoBuffer);
+        }
+
+        function setCanvasHandlers(id) {
+            const canvas = document.getElementById(id);
+            canvas.onmousedown = onCanvasDown;
+            canvas.onmouseup = onCanvasUp;
+        }
+
+        createButtons();
+
+        const monoBuffer = [];
+
         function handleFile(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -68,7 +238,6 @@
                 originalCtx.drawImage(img, 0, 0, width, height);
 
                 const imgData = originalCtx.getImageData(0, 0, width, height);
-                const monoBuffer = [];
 
                 // Convert to monochrome buffer
                 // (colours that are not close to black or white are converted to dither patterns
@@ -98,9 +267,9 @@
                                 const testColour = referenceColour.colour;
 
                                 const diff = [
-                                    color[0] - testColour[0],
-                                    color[1] - testColour[1],
-                                    color[2] - testColour[2],
+                                    (color[0] - testColour[0]) * 1,
+                                    (color[1] - testColour[1]) * 1,
+                                    (color[2] - testColour[2]) * 1,
                                     hslImg.l - referenceColour.l,
                                     (hslImg.s - referenceColour.s) * 2,
                                     ((hslImg.h + 360 - referenceColour.h) % 360) * Math.max(0, hslImg.s - 10) / 360
@@ -178,14 +347,15 @@
                 const row = monoBuffer[y];
                 for (let x = 0; x < width; x++) {
                     const idx = (y * width + x) * 4;
-                    data[idx] = row[x] * 255;
+                    data[idx] = 0;
                     data[idx + 1] = row[x] * 255;
-                    data[idx + 2] = row[x] * 255;
+                    data[idx + 2] = 0;
                     data[idx + 3] = 255;
                 }
             }
 
             ctx.putImageData(imgData, 0, 0);
+            setCanvasHandlers('bw');
         }
 
         function renderArtifactColors(monoBuffer) {
@@ -247,7 +417,8 @@
                 }
             }
 
-            ctx.putImageData(imgData, 0, 0);
+            ctx.putImageData(imgData, 0, 0);            
+            setCanvasHandlers('artifact');
             renderBlur(data);
         }
 
@@ -295,6 +466,7 @@
             }
 
             ctx.putImageData(imgData, 0, 0);
+            setCanvasHandlers('blur');
         }
     </script>
 </body>
