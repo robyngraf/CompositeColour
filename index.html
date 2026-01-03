@@ -2,7 +2,10 @@
 <html>
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8">    
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src *;img-src * 'self' data: https: filesystem: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' *; style-src  'self' 'unsafe-inline' *">
+
     <title>Artifact Colors Editor</title>
     <style>
         #buttonRow {
@@ -38,10 +41,10 @@
 <body>  
     <input type="file" id="fileInput" accept="image/png">
     <div>
-        <canvas id="original"></canvas>
-        <canvas id="bw"></canvas>
-        <canvas id="artifact" style="display: none;"></canvas>
-        <canvas id="blur"></canvas>
+        <canvas id="original"> </canvas>
+        <canvas id="bw"> </canvas>
+        <canvas id="artifact" style="display: none;"> </canvas>
+        <canvas id="blur"> </canvas>
     </div>
     <div id="buttonRow"> </div>
     <div id="currentColourBox">
