@@ -142,33 +142,6 @@
             box.style.background = currentColour.l >= 50 ? "black" : "white";
         }
 
-        function onCanvasClick(event) {
-            const canvas = event.target;
-            const rect = canvas.getBoundingClientRect();
-            const x = Math.floor(event.clientX - rect.left);
-            const y = Math.floor(event.clientY - rect.top);
-            
-            const v = [
-                [currentColour.r, currentColour.g, currentColour.b],
-                [currentColour.c, currentColour.m, currentColour.y],
-            ];
-            const radiusSquared = brushRadius * brushRadius;
-            for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
-                const y1 = y + y2;
-                if (y1 < 0 || y1 >= monoBuffer.length) continue;
-                const rowPhase = y1 % 2;
-                for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
-                    if (x2 * x2 + y2 * y2 > radiusSquared) continue;
-                    const x1 = x + x2;
-                    if (x1 < 0 || x1 >= monoBuffer[0].length) continue;
-                    const phase = x1 % 3;
-                    monoBuffer[y1][x1] = v[rowPhase][phase];
-                }
-            }
-            renderBw(monoBuffer);
-            renderArtifactColors(monoBuffer);
-        }
-
         let startX;
         let startY;
         function onCanvasDown(event) {
@@ -206,13 +179,13 @@
                         if (x1 < 0 || x1 >= monoBuffer[0].length) continue;
                         const phase = x1 % 3;
                         monoBuffer[y1][x1] = v[rowPhase][phase];
+                        alphaBuffer[y1][x1] = 1;
                     }
                 }
             }
-
             
-            renderBw(monoBuffer);
-            renderArtifactColors(monoBuffer);
+            renderBw();
+            renderArtifactColors();
         }
 
         function setCanvasHandlers(id) {
@@ -224,6 +197,7 @@
         createButtons();
 
         const monoBuffer = [];
+        const alphaBuffer = [];
 
         function handleFile(event) {
             const file = event.target.files[0];
@@ -248,11 +222,13 @@
                 for (let y = 0; y < height; y++) {
                     const rowPhase = y % 2;
                     const row = monoBuffer[y] = [];
+                    const alphaRow = alphaBuffer[y] = [];
                     for (let x = 0; x < width; x++) {
                         const idx = (y * width + x) * 4;
                         const rImg = imgData.data[idx];
                         const gImg = imgData.data[idx + 1];
                         const bImg = imgData.data[idx + 2];
+                        alphaRow[x] = imgData.data[idx + 3] > 127 ? 1 : 0;
                         let result;
                         if (Math.max(rImg, gImg, bImg) < 32) {
                             result = 0;
@@ -293,8 +269,8 @@
                         row[x] = result;
                     }
                 }
-                renderBw(monoBuffer);
-                renderArtifactColors(monoBuffer);
+                renderBw();
+                renderArtifactColors();
             };
             img.src = URL.createObjectURL(file);
         }
@@ -338,7 +314,7 @@
             };
         }
 
-        function renderBw(monoBuffer) {
+        function renderBw() {
             const canvas = document.getElementById("bw");
             canvas.width = width;
             canvas.height = height;
@@ -348,12 +324,13 @@
 
             for (let y = 0; y < height; y++) {
                 const row = monoBuffer[y];
+                const alphaRow = alphaBuffer[y];
                 for (let x = 0; x < width; x++) {
                     const idx = (y * width + x) * 4;
                     data[idx] = 0;
                     data[idx + 1] = row[x] * 255;
                     data[idx + 2] = 0;
-                    data[idx + 3] = 255;
+                    data[idx + 3] = alphaRow[x] * 255;
                 }
             }
 
@@ -361,7 +338,7 @@
             setCanvasHandlers('bw');
         }
 
-        function renderArtifactColors(monoBuffer) {
+        function renderArtifactColors() {
             const canvas = document.getElementById("artifact");
             canvas.width = width;
             canvas.height = height;
@@ -371,6 +348,7 @@
 
             for (let y = 0; y < height; y++) {
                 const row = monoBuffer[y];
+                const alphaRow = alphaBuffer[y];
                 for (let x = 0; x < width; x++) {
                     let color = [127, 127, 127];
                     let chromaConfidence = 0;
@@ -416,7 +394,7 @@
                         data[idx + 1] = color[1];
                         data[idx + 2] = color[2];
                     }
-                    data[idx + 3] = 255;
+                    data[idx + 3] = alphaRow[x] * 255;
                 }
             }
 
@@ -433,6 +411,8 @@
             const imgData = ctx.createImageData(width, height);
             const data = imgData.data;
 
+            // TODO: alpha can be improved by not including transparent pixels in colour average
+
             for (let y = 0; y < height; y++) {
                 for (let x = 0; x < width; x++) {
                     const idx = (y * width + x) * 4;
@@ -441,6 +421,7 @@
                     let r = data1[idx] * w1;
                     let g = data1[idx + 1] * w1;
                     let b = data1[idx + 2] * w1;
+                    let a = data1[idx + 3] * w1;
                     let t = 1 * w1;
 
                     if (y > 0) {
@@ -448,6 +429,7 @@
                         r += data1[idx2] * w2 * .5;
                         g += data1[idx2 + 1] * w2 * .5;
                         b += data1[idx2 + 2] * w2 * .5;
+                        a += data1[idx2 + 3] * w2 * .5;
                         t += .5 * w2;
                     }
                     if (y - 1 < height) {
@@ -455,16 +437,18 @@
                         r += data1[idx3] * w2 * .5;
                         g += data1[idx3 + 1] * w2 * .5;
                         b += data1[idx3 + 2] * w2 * .5;
+                        a += data1[idx3 + 3] * w2 * .5;
                         t += .5 * w2;
                     }
                     
                     r = r / t;
                     g = g / t;
                     b = b / t;
+                    a = a / t;
                     data[idx] = r;
                     data[idx + 1] = g;
                     data[idx + 2] = b;
-                    data[idx + 3] = 255;
+                    data[idx + 3] = a;
                 }
             }
 
