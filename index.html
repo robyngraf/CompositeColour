@@ -160,18 +160,35 @@
 
         let startX;
         let startY;
+        let isMouseDown;
+
+        function onCanvasLeave(event) {
+            isMouseDown = false;
+            const canvas = event.target;
+            if (canvas.id == 'original') {
+                const ctx = canvas.getContext("2d");
+                ctx.reset();
+                if (img) ctx.drawImage(img, 0, 0, width, height);
+            }
+            if (canvas.id == 'bw') renderBw();
+            if (canvas.id == 'artifact') renderArtifactColors();
+            if (canvas.id == 'blur') renderArtifactColors();
+        }
+
         function onCanvasDown(event) {
+            isMouseDown = true;
             const canvas = event.target;
             const rect = canvas.getBoundingClientRect();
-            startX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom);
-            startY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom);
+            startX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom - 1);
+            startY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom - 1);
         }
         
         function onCanvasUp(event) {
+            isMouseDown = false;
             const canvas = event.target;
             const rect = canvas.getBoundingClientRect();
-            const endX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom);
-            const endY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom);
+            const endX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom - 1);
+            const endY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom - 1);
 
             const v = [
                 [currentColour.r, currentColour.g, currentColour.b],
@@ -203,11 +220,64 @@
             renderBw();
             renderArtifactColors();
         }
+        
+        function onCanvasMove(event) {
+            const canvas = event.target;
+            if (canvas.id == 'bw') renderBw();
+            if (canvas.id == 'artifact') renderArtifactColors();
+            if (canvas.id == 'blur') renderArtifactColors();
+            const rect = canvas.getBoundingClientRect();
+
+            const endX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom - 1);
+            const endY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom - 1);
+            if (!isMouseDown) {
+                startX = endX;
+                startY = endY;
+            }
+            
+            const ctx = canvas.getContext("2d");
+            if (canvas.id == 'original') {
+                ctx.reset();
+                if (img) ctx.drawImage(img, 0, 0, width, height);
+            }
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+
+            const radiusSquared = brushRadius * brushRadius;
+            const r = currentColour.colour[0];
+            const g = currentColour.colour[1];
+            const b = currentColour.colour[2];
+
+            // if len is 0, we draw at 1 pixel
+            const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
+            for (let i = 0; i <= len; i++) {
+                const x = Math.round(startX + i * (endX - startX) / len);
+                const y = Math.round(startY + i * (endY - startY) / len);
+                for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
+                    const y1 = y + y2;
+                    if (y1 < 0 || y1 >= monoBuffer.length) continue;
+                    for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
+                        if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
+                        const x1 = x + x2;
+                        if (x1 < 0 || x1 >= monoBuffer[0].length) continue;
+                        const idx = (y1 * width + x1) * 4;
+                        data[idx] = r;
+                        data[idx + 1] = g;
+                        data[idx + 2] = b;
+                        data[idx + 3] = 255;
+                    }
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+        }
 
         function setCanvasHandlers(id) {
             const canvas = document.getElementById(id);
             canvas.onmousedown = onCanvasDown;
             canvas.onmouseup = onCanvasUp;
+            canvas.onmouseleave = onCanvasLeave;
+            canvas.onmousemove = onCanvasMove;
         }
 
         createButtons();
@@ -230,13 +300,13 @@
         
         let monoBuffer = createMatrix(height, width);
         let alphaBuffer = createMatrix(height, width);
-
+        let img;
 
         function handleFile(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            const img = new Image();
+            img = new Image();
             img.onload = () => {
                 width = img.width;
                 height = img.height;
