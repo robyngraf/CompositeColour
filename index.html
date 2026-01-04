@@ -3,8 +3,6 @@
 
 <head>
     <meta charset="UTF-8">    
-    <meta http-equiv="Content-Security-Policy"
-        content="default-src *;img-src * 'self' data: https: filesystem: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' *; style-src  'self' 'unsafe-inline' *">
 
     <title>Artifact Colors Editor</title>
     <style>
@@ -34,17 +32,35 @@
         canvas {
             image-rendering: pixelated;
             zoom: 4;
+            border: 1px solid purple;
+            box-sizing: content-box;
+
+            --s: 12px; /* Size of the grey background squares */
+            --c1: #ffffff;
+            --c2: #cccccc;
+
+            background-image: 
+                linear-gradient(45deg, var(--c2) 25%, transparent 25%),
+                linear-gradient(-45deg, var(--c2) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, var(--c2) 75%),
+                linear-gradient(-45deg, transparent 75%, var(--c2) 75%);
+            background-size: calc(var(--s) * 2) calc(var(--s) * 2);
+            background-position:
+                0 0,
+                0 var(--s),
+                var(--s) calc(-1 * var(--s)),
+                var(--s) 0;
         }
     </style>
 </head>
 
-<body>  
+<body>
     <input type="file" id="fileInput" accept="image/png">
     <div>
-        <canvas id="original"> </canvas>
-        <canvas id="bw"> </canvas>
-        <canvas id="artifact" style="display: none;"> </canvas>
-        <canvas id="blur"> </canvas>
+        <canvas id="original" width="48px" height="48px"> </canvas>
+        <canvas id="bw" width="48px" height="48px"> </canvas>
+        <canvas id="artifact" width="48px" height="48px" style="display: none;"> </canvas>
+        <canvas id="blur" width="48px" height="48px"> </canvas>
     </div>
     <div id="buttonRow"> </div>
     <div id="currentColourBox">
@@ -57,8 +73,8 @@
     </div>
 
     <script>
-        let width;
-        let height;
+        let width = 48;
+        let height = 48;
 
         document.getElementById("fileInput").addEventListener("change", handleFile);
 
@@ -174,7 +190,7 @@
                     if (y1 < 0 || y1 >= monoBuffer.length) continue;
                     const rowPhase = y1 % 2;
                     for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
-                        if (x2 * x2 + y2 * y2 > radiusSquared) continue;
+                        if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
                         const x1 = x + x2;
                         if (x1 < 0 || x1 >= monoBuffer[0].length) continue;
                         const phase = x1 % 3;
@@ -196,8 +212,25 @@
 
         createButtons();
 
-        const monoBuffer = [];
-        const alphaBuffer = [];
+        /**
+         * Creates a 2D array (matrix) of a given width and height, filled with a specific value.
+         * @param {number} rows - The number of outer arrays (height).
+         * @param {number} cols - The number of elements in each inner array (width).
+         * @param {*} value - The initial value for each element.
+         * @returns {Array<Array<*>>} The 2D array.
+         */
+        function createMatrix(rows, cols, value = 0) {
+            // Create 'rows' number of outer array elements, mapping each to a new inner array
+            const matrix = Array.from({ length: rows }, () =>
+                // For each inner array, create 'cols' number of elements filled with the value
+                Array.from({ length: cols }, () => value)
+            );
+            return matrix;
+        }
+        
+        let monoBuffer = createMatrix(height, width);
+        let alphaBuffer = createMatrix(height, width);
+
 
         function handleFile(event) {
             const file = event.target.files[0];
@@ -205,10 +238,13 @@
 
             const img = new Image();
             img.onload = () => {
-                // Draw image to original canvas
-                const originalCanvas = document.getElementById("original");
                 width = img.width;
                 height = img.height;
+                monoBuffer = createMatrix(height, width);
+                alphaBuffer = createMatrix(height, width);
+
+                // Draw image to original canvas
+                const originalCanvas = document.getElementById("original");
                 originalCanvas.width = width;
                 originalCanvas.height = height;
                 const originalCtx = originalCanvas.getContext("2d");
@@ -269,11 +305,18 @@
                         row[x] = result;
                     }
                 }
+                
                 renderBw();
                 renderArtifactColors();
             };
             img.src = URL.createObjectURL(file);
         }
+
+        
+        setCanvasHandlers('original');
+        setCanvasHandlers('bw');
+        setCanvasHandlers('artifact');
+        setCanvasHandlers('blur');
 
         function rgbToHsl(r, g, b) {
             // Convert RGB to the 0-1 range
@@ -335,7 +378,6 @@
             }
 
             ctx.putImageData(imgData, 0, 0);
-            setCanvasHandlers('bw');
         }
 
         function renderArtifactColors() {
@@ -398,8 +440,7 @@
                 }
             }
 
-            ctx.putImageData(imgData, 0, 0);            
-            setCanvasHandlers('artifact');
+            ctx.putImageData(imgData, 0, 0);
             renderBlur(data);
         }
 
@@ -453,7 +494,6 @@
             }
 
             ctx.putImageData(imgData, 0, 0);
-            setCanvasHandlers('blur');
         }
     </script>
 </body>
