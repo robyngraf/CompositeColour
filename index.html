@@ -40,6 +40,7 @@
             width: fit-content;
             border: 1px solid purple;
             zoom: 4;
+            margin: 1px;
 
             --s: 12px; /* Size of the grey background squares */
             --c1: #ffffff;
@@ -64,6 +65,7 @@
     <input type="file" id="fileInput" accept="image/png">
     <div>
         <canvas id="original" width="48px" height="48px" class="canvasBackground"> </canvas>
+        <canvas id="colour" width="48px" height="48px" class="canvasBackground"> </canvas>
         <div class="canvasBackground"><canvas id="bw" width="48px" height="48px"  class="green"> </canvas></div>
         <canvas id="artifact" width="48px" height="48px" style="display: none;" class="canvasBackground"> </canvas>
         <canvas id="blur" width="48px" height="48px" class="canvasBackground"> </canvas>
@@ -86,13 +88,13 @@
 
         function colours() {
             const colours = [];
-            for (let w = 0; w < 64; w++) {
-                const r = w & 1;
-                const g = w >>> 1 & 1;
-                const b = w >>> 2 & 1;
-                const c = w >>> 3 & 1;
-                const m = w >>> 4 & 1;
-                const y = w >>> 5 & 1;
+            for (let index = 0; index < 64; index++) {
+                const r = index & 1;
+                const g = index >>> 1 & 1;
+                const b = index >>> 2 & 1;
+                const c = index >>> 3 & 1;
+                const m = index >>> 4 & 1;
+                const y = index >>> 5 & 1;
                 const colour = [
                     127 * r + 64 * m + 64 * y,
                     127 * g + 64 * c + 64 * y,
@@ -109,7 +111,8 @@
                     colour: colour,
                     h: hsl.h,
                     s: hsl.s,
-                    l: hsl.l 
+                    l: hsl.l,
+                    index: index
                 });
             }
             return colours;
@@ -176,6 +179,7 @@
                 ctx.reset();
                 if (img) ctx.drawImage(img, 0, 0, width, height);
             }
+            if (canvas.id == 'colour') renderColour();
             if (canvas.id == 'bw') renderBw();
             if (canvas.id == 'artifact') renderArtifactColors();
             if (canvas.id == 'blur') renderArtifactColors();
@@ -198,11 +202,6 @@
             const endX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom - 1);
             const endY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom - 1);
 
-            const v = [
-                [currentColour.r, currentColour.g, currentColour.b],
-                [currentColour.c, currentColour.m, currentColour.y],
-            ];
-
             const radiusSquared = brushRadius * brushRadius;
 
             // if len is 0, we draw at 1 pixel
@@ -212,25 +211,26 @@
                 const y = Math.round(startY + i * (endY - startY) / len);
                 for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
                     const y1 = y + y2;
-                    if (y1 < 0 || y1 >= monoBuffer.length) continue;
-                    const rowPhase = y1 % 2;
+                    if (y1 < 0 || y1 >= colourBuffer.length) continue;
                     for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
                         if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
                         const x1 = x + x2;
-                        if (x1 < 0 || x1 >= monoBuffer[0].length) continue;
-                        const phase = x1 % 3;
-                        monoBuffer[y1][x1] = v[rowPhase][phase];
+                        if (x1 < 0 || x1 >= colourBuffer[0].length) continue;
+                        colourBuffer[y1][x1] = currentColour.index;
                         alphaBuffer[y1][x1] = 1;
                     }
                 }
             }
             
+            renderColour()
+            renderToMonoBuffer();
             renderBw();
             renderArtifactColors();
         }
         
         function onCanvasMove(event) {
             const canvas = event.target;
+            if (canvas.id == 'colour') renderColour();
             if (canvas.id == 'bw') renderBw();
             if (canvas.id == 'artifact') renderArtifactColors();
             if (canvas.id == 'blur') renderArtifactColors();
@@ -306,9 +306,32 @@
             return matrix;
         }
         
+        let colourBuffer = createMatrix(height, width);
         let monoBuffer = createMatrix(height, width);
         let alphaBuffer = createMatrix(height, width);
         let img;
+
+        function renderToMonoBuffer() {
+            // Convert to monochrome buffer
+            // (colours that are not close to black or white are converted to dither patterns
+            // which approximately preserve lightness and correspond to 61 specific colours)
+
+            for (let y = 0; y < height; y++) {
+                const rowPhase = y % 2;
+                const colourRow = colourBuffer[y];
+                const monoRow = monoBuffer[y];
+                const alphaRow = alphaBuffer[y];
+                for (let x = 0; x < width; x++) {
+                    const colour = referenceColours[colourRow[x]];
+                    const phase = x % 3;
+                    if (rowPhase) {
+                        monoRow[x] = [colour.c, colour.m, colour.y][phase];
+                    } else {
+                        monoRow[x] = [colour.r, colour.g, colour.b][phase];
+                    }
+                }
+            }
+        }
 
         function handleFile(event) {
             const file = event.target.files[0];
@@ -318,6 +341,7 @@
             img.onload = () => {
                 width = img.width;
                 height = img.height;
+                colourBuffer = createMatrix(height, width);
                 monoBuffer = createMatrix(height, width);
                 alphaBuffer = createMatrix(height, width);
 
@@ -330,12 +354,11 @@
 
                 const imgData = originalCtx.getImageData(0, 0, width, height);
 
-                // Convert to monochrome buffer
-                // (colours that are not close to black or white are converted to dither patterns
-                // which approximately preserve lightness and correspond to 61 specific colours)
+                // Convert to colour buffer
+                // (64 colour palette (but two greys are identical so 1 will not be automatically used))
                 for (let y = 0; y < height; y++) {
                     const rowPhase = y % 2;
-                    const row = monoBuffer[y] = [];
+                    const colourRow = colourBuffer[y] = [];
                     const alphaRow = alphaBuffer[y] = [];
                     for (let x = 0; x < width; x++) {
                         const idx = (y * width + x) * 4;
@@ -347,7 +370,7 @@
                         if (Math.max(rImg, gImg, bImg) < 32) {
                             result = 0;
                         } else if (Math.min(rImg, gImg, bImg) > 224) {
-                            result = 1;
+                            result = 63;
                         } else {
                             const color = [rImg, gImg, bImg];
                             const hslImg = rgbToHsl(rImg, gImg, bImg);
@@ -371,19 +394,15 @@
 
                                 if (dist < maxDist) {
                                     maxDist = dist;
-
-                                    if (rowPhase) {
-                                        result = [referenceColour.c, referenceColour.m, referenceColour.y][phase];
-                                    } else {
-                                        result = [referenceColour.r, referenceColour.g, referenceColour.b][phase];
-                                    }
+                                    result = referenceColour.index;
                                 }
                             }
                         }
-                        row[x] = result;
+                        colourRow[x] = result;
                     }
                 }
-                
+                renderColour();
+                renderToMonoBuffer();
                 renderBw();
                 renderArtifactColors();
             };
@@ -392,6 +411,7 @@
 
         
         setCanvasHandlers('original');
+        setCanvasHandlers('colour');
         setCanvasHandlers('bw');
         setCanvasHandlers('artifact');
         setCanvasHandlers('blur');
@@ -433,6 +453,30 @@
                 s: Math.round(s * 100),
                 l: Math.round(l * 100)
             };
+        }
+
+        function renderColour() {
+            const canvas = document.getElementById("colour");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            const imgData = ctx.createImageData(width, height);
+            const data = imgData.data;
+
+            for (let y = 0; y < height; y++) {
+                const row = colourBuffer[y];
+                const alphaRow = alphaBuffer[y];
+                for (let x = 0; x < width; x++) {
+                    const idx = (y * width + x) * 4;
+                    const colour = referenceColours[row[x]].colour;
+                    data[idx] = colour[0];
+                    data[idx + 1] = colour[1];
+                    data[idx + 2] = colour[2];
+                    data[idx + 3] = alphaRow[x] * 255;
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
         }
 
         function renderBw() {
