@@ -24,6 +24,9 @@
             border-radius: 200px;
             flex-shrink: 0;
         }
+        .green {
+            filter: grayscale(100%) sepia(100%) hue-rotate(72deg) saturate(100);
+        }
         .colourButton {
             width: 20px;
             height: 20px;
@@ -31,9 +34,11 @@
         }
         canvas {
             image-rendering: pixelated;
-            zoom: 4;
+        }
+        .canvasBackground {
+            width: fit-content;
             border: 1px solid purple;
-            box-sizing: content-box;
+            zoom: 4;
 
             --s: 12px; /* Size of the grey background squares */
             --c1: #ffffff;
@@ -57,10 +62,10 @@
 <body>
     <input type="file" id="fileInput" accept="image/png">
     <div>
-        <canvas id="original" width="48px" height="48px"> </canvas>
-        <canvas id="bw" width="48px" height="48px"> </canvas>
-        <canvas id="artifact" width="48px" height="48px" style="display: none;"> </canvas>
-        <canvas id="blur" width="48px" height="48px"> </canvas>
+        <canvas id="original" width="48px" height="48px" class="canvasBackground"> </canvas>
+        <div class="canvasBackground"><canvas id="bw" width="48px" height="48px"  class="green"> </canvas></div>
+        <canvas id="artifact" width="48px" height="48px" style="display: none;" class="canvasBackground"> </canvas>
+        <canvas id="blur" width="48px" height="48px" class="canvasBackground"> </canvas>
     </div>
     <div id="buttonRow"> </div>
     <div id="currentColourBox">
@@ -176,6 +181,7 @@
         }
 
         function onCanvasDown(event) {
+            if (event.button !== 1) return; // Left click only
             isMouseDown = true;
             const canvas = event.target;
             const rect = canvas.getBoundingClientRect();
@@ -184,6 +190,7 @@
         }
         
         function onCanvasUp(event) {
+            if (event.button !== 1) return; // Left click only
             isMouseDown = false;
             const canvas = event.target;
             const rect = canvas.getBoundingClientRect();
@@ -440,9 +447,10 @@
                 const alphaRow = alphaBuffer[y];
                 for (let x = 0; x < width; x++) {
                     const idx = (y * width + x) * 4;
-                    data[idx] = 0;
-                    data[idx + 1] = row[x] * 255;
-                    data[idx + 2] = 0;
+                    const brightness = row[x] * 255
+                    data[idx] = brightness;
+                    data[idx + 1] = brightness;
+                    data[idx + 2] = brightness;
                     data[idx + 3] = alphaRow[x] * 255;
                 }
             }
