@@ -400,6 +400,7 @@
 
                             let maxDist = Number.MAX_SAFE_INTEGER;
                             for (const referenceColour of referenceColours) {
+                                if (referenceColour.index == 56) continue;
                                 const testColour = referenceColour.colour;
 
                                 const diff = [
