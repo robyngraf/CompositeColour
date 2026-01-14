@@ -58,6 +58,9 @@
                 var(--s) calc(-1 * var(--s)),
                 var(--s) 0;
         }
+        label {
+            display: inline-block;
+        }
     </style>
 </head>
 
@@ -74,10 +77,17 @@
     <div id="currentColourBox">
         <div id="currentColour"> </div>
     </div>
-    <div>
+    <div style="width:160px">
         <label for="range">Brush Size:</label>
-        <input type="range" id="radius" name="radius" min="0" max="100" value="3">
-        <span id="radius-value">50</span>
+        <input type="range" id="radius" name="radius" min="0" max="49" value="2" style="width:55px">
+        <span id="radius-value">3</span>
+    </div>
+    <div style="width:160px">
+        <label for="draw"><input type="radio" id="draw" name="tool" value="draw" checked>&nbsp;Draw</label>
+        <!-- Draw Behind? -->
+        <!-- Erase Colour? -->
+        <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
+        <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool" value="fill">&nbsp;Fill</label>
     </div>
 
     <script>
@@ -170,6 +180,7 @@
         let startX;
         let startY;
         let isMouseDown;
+        let isErase;
 
         function onCanvasLeave(event) {
             isMouseDown = false;
@@ -188,6 +199,7 @@
         function onCanvasDown(event) {
             if (event.button !== 0) return; // Left click only
             isMouseDown = true;
+
             const canvas = event.target;
             const rect = canvas.getBoundingClientRect();
             startX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom - 1);
@@ -204,7 +216,10 @@
 
             const radiusSquared = brushRadius * brushRadius;
 
-            // if len is 0, we draw at 1 pixel
+            const colour = isErase ? 0 : currentColour.index;
+            const alpha = isErase ? 0 : 1;
+
+            // if len is 0, we draw 1 pixel
             const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
             for (let i = 0; i <= len; i++) {
                 const x = Math.round(startX + i * (endX - startX) / len);
@@ -216,8 +231,8 @@
                         if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
                         const x1 = x + x2;
                         if (x1 < 0 || x1 >= colourBuffer[0].length) continue;
-                        colourBuffer[y1][x1] = currentColour.index;
-                        alphaBuffer[y1][x1] = 1;
+                        colourBuffer[y1][x1] = colour;
+                        alphaBuffer[y1][x1] = alpha;
                     }
                 }
             }
@@ -229,6 +244,9 @@
         }
         
         function onCanvasMove(event) {
+            const selectedTool = document.querySelector('input[name="tool"]:checked')?.value;
+            isErase = selectedTool == "erase";
+            
             const canvas = event.target;
             if (canvas.id == 'colour') renderColour();
             if (canvas.id == 'bw') renderBw();
@@ -252,11 +270,12 @@
             const data = imgData.data;
 
             const radiusSquared = brushRadius * brushRadius;
-            const r = currentColour.colour[0];
-            const g = currentColour.colour[1];
-            const b = currentColour.colour[2];
+            const r = isErase ? 0 : currentColour.colour[0];
+            const g = isErase ? 0 : currentColour.colour[1];
+            const b = isErase ? 0 : currentColour.colour[2];
+            const a = isErase ? 0 : 255;
 
-            // if len is 0, we draw at 1 pixel
+            // if len is 0, we draw 1 pixel
             const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
             for (let i = 0; i <= len; i++) {
                 const x = Math.round(startX + i * (endX - startX) / len);
@@ -272,7 +291,7 @@
                         data[idx] = r;
                         data[idx + 1] = g;
                         data[idx + 2] = b;
-                        data[idx + 3] = 255;
+                        data[idx + 3] = a;
                     }
                 }
             }
