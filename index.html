@@ -34,6 +34,7 @@
         }
         canvas {
             image-rendering: pixelated;
+            display: block;
         }
         .canvasBackground {
             width: fit-content;
@@ -181,7 +182,7 @@
         }
 
         function onCanvasDown(event) {
-            if (event.button !== 1) return; // Left click only
+            if (event.button !== 0) return; // Left click only
             isMouseDown = true;
             const canvas = event.target;
             const rect = canvas.getBoundingClientRect();
@@ -190,7 +191,7 @@
         }
         
         function onCanvasUp(event) {
-            if (event.button !== 1) return; // Left click only
+            if (event.button !== 0) return; // Left click only
             isMouseDown = false;
             const canvas = event.target;
             const rect = canvas.getBoundingClientRect();
