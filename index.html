@@ -242,11 +242,11 @@
                 const y = Math.round(startY + i * (endY - startY) / len);
                 for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
                     const y1 = y + y2;
-                    if (y1 < 0 || y1 >= colourBuffer.length) continue;
+                    if (y1 < 0 || y1 >= height) continue;
                     for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
                         if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
                         const x1 = x + x2;
-                        if (x1 < 0 || x1 >= colourBuffer[0].length) continue;
+                        if (x1 < 0 || x1 >= width) continue;
                         colourBuffer[y1][x1] = colour;
                         alphaBuffer[y1][x1] = alpha;
                     }
@@ -297,11 +297,11 @@
                 const y = Math.round(startY + i * (endY - startY) / len);
                 for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
                     const y1 = y + y2;
-                    if (y1 < 0 || y1 >= monoBuffer.length) continue;
+                    if (y1 < 0 || y1 >= height) continue;
                     for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
                         if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
                         const x1 = x + x2;
-                        if (x1 < 0 || x1 >= monoBuffer[0].length) continue;
+                        if (x1 < 0 || x1 >= width) continue;
                         const idx = (y1 * width + x1) * 4;
                         data[idx] = r;
                         data[idx + 1] = g;
