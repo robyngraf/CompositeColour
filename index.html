@@ -198,17 +198,23 @@
         }
 
         function onCanvasDown(event) {
-            if (event.button !== 0) return; // Left click only
+            const canvas = event.target;
+            if (event.button !== 0 || event.buttons > 1) { // Left click only
+                if (canvas.id == 'colour') renderColour();
+                if (canvas.id == 'bw') renderBw();
+                if (canvas.id == 'artifact') renderArtifactColors();
+                if (canvas.id == 'blur') renderArtifactColors();
+                return;
+            }
             isMouseDown = true;
 
-            const canvas = event.target;
             const rect = canvas.getBoundingClientRect();
             startX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom - 1);
             startY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom - 1);
         }
         
         function onCanvasUp(event) {
-            if (event.button !== 0) return; // Left click only
+            if (event.button !== 0 || event.buttons > 1) return; // Left click only
             isMouseDown = false;
             const canvas = event.target;
             const rect = canvas.getBoundingClientRect();
@@ -245,6 +251,7 @@
         }
         
         function onCanvasMove(event) {
+            if (event.buttons > 1) return; // Left button or no button only
             const selectedTool = document.querySelector('input[name="tool"]:checked')?.value;
             isErase = selectedTool == "erase";
             
