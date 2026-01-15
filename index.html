@@ -197,6 +197,19 @@
             if (canvas.id == 'blur') renderArtifactColors();
         }
 
+        function getMousePosition(event) {
+            const canvas = event.target;
+            const rect = canvas.getBoundingClientRect();
+            let x = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom);
+            let y = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom);
+            
+            if (canvas.id != 'bw') {
+                x -= 1;
+                y -= 1;
+            }
+            return [x,y];
+        }
+
         function onCanvasDown(event) {
             const canvas = event.target;
             if (event.button !== 0 || event.buttons > 1) { // Left click only
@@ -208,18 +221,14 @@
             }
             isMouseDown = true;
 
-            const rect = canvas.getBoundingClientRect();
-            startX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom - 1);
-            startY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom - 1);
+            [startX, startY] = getMousePosition(event);
         }
         
         function onCanvasUp(event) {
             if (event.button !== 0 || event.buttons > 1) return; // Left click only
             isMouseDown = false;
             const canvas = event.target;
-            const rect = canvas.getBoundingClientRect();
-            const endX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom - 1);
-            const endY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom - 1);
+            const [endX, endY] = getMousePosition(event);
 
             const radiusSquared = brushRadius * brushRadius;
 
@@ -260,10 +269,8 @@
             if (canvas.id == 'bw') renderBw();
             if (canvas.id == 'artifact') renderArtifactColors();
             if (canvas.id == 'blur') renderArtifactColors();
-            const rect = canvas.getBoundingClientRect();
 
-            const endX = Math.floor((event.clientX - rect.left) / canvas.currentCSSZoom - 1);
-            const endY = Math.floor((event.clientY - rect.top) / canvas.currentCSSZoom - 1);
+            const [endX, endY] = getMousePosition(event);
             if (!isMouseDown) {
                 startX = endX;
                 startY = endY;
