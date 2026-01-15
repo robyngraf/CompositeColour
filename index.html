@@ -79,7 +79,7 @@
         <div id="currentColour"> </div>
     </div>
     <div style="width:160px">
-        <label for="range">Brush Size:</label>
+        <label for="radius">Brush Size:</label>
         <input type="range" id="radius" name="radius" min="0" max="49" value="2" style="width:55px">
         <span id="radius-value">3</span>
     </div>
@@ -187,7 +187,7 @@
             isMouseDown = false;
             const canvas = event.target;
             if (canvas.id == 'original') {
-                const ctx = canvas.getContext("2d");
+                const ctx = canvas.getContext("2d", { willReadFrequently: true });
                 ctx.reset();
                 if (img) ctx.drawImage(img, 0, 0, width, height);
             }
@@ -276,7 +276,7 @@
                 startY = endY;
             }
             
-            const ctx = canvas.getContext("2d");
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
             if (canvas.id == 'original') {
                 ctx.reset();
                 if (img) ctx.drawImage(img, 0, 0, width, height);
@@ -383,7 +383,7 @@
                 const originalCanvas = document.getElementById("original");
                 originalCanvas.width = width;
                 originalCanvas.height = height;
-                const originalCtx = originalCanvas.getContext("2d");
+                const originalCtx = originalCanvas.getContext("2d", { willReadFrequently: true });
                 originalCtx.drawImage(img, 0, 0, width, height);
 
                 const imgData = originalCtx.getImageData(0, 0, width, height);
@@ -494,7 +494,7 @@
             const canvas = document.getElementById("colour");
             canvas.width = width;
             canvas.height = height;
-            const ctx = canvas.getContext("2d");
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
             const imgData = ctx.createImageData(width, height);
             const data = imgData.data;
 
@@ -518,7 +518,7 @@
             const canvas = document.getElementById("bw");
             canvas.width = width;
             canvas.height = height;
-            const ctx = canvas.getContext("2d");
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
             const imgData = ctx.createImageData(width, height);
             const data = imgData.data;
 
@@ -542,7 +542,7 @@
             const canvas = document.getElementById("artifact");
             canvas.width = width;
             canvas.height = height;
-            const ctx = canvas.getContext("2d");
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
             const imgData = ctx.createImageData(width, height);
             const data = imgData.data;
 
