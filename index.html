@@ -445,7 +445,7 @@
             img.src = URL.createObjectURL(file);
         }
 
-        
+
         setCanvasHandlers('original');
         setCanvasHandlers('colour');
         setCanvasHandlers('bw');
@@ -632,7 +632,7 @@
                         a += data1[idx2 + 3] * w2 * .5;
                         t += .5 * w2;
                     }
-                    if (y - 1 < height) {
+                    if (y + 1 < height) {
                         const idx3 = ((y + 1) * width + x) * 4;
                         r += data1[idx3] * w2 * .5;
                         g += data1[idx3 + 1] * w2 * .5;
@@ -640,7 +640,7 @@
                         a += data1[idx3 + 3] * w2 * .5;
                         t += .5 * w2;
                     }
-                    
+
                     r = r / t;
                     g = g / t;
                     b = b / t;
