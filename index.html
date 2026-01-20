@@ -611,40 +611,47 @@
             const imgData = ctx.createImageData(width, height);
             const data = imgData.data;
 
-            // TODO: alpha can be improved by not including transparent pixels in colour average
-
             for (let y = 0; y < height; y++) {
                 for (let x = 0; x < width; x++) {
                     const idx = (y * width + x) * 4;
+                    const a2 = data1[idx + 3] / 255;
                     const w1 = (y % 2) ? 1 : 1;
                     const w2 = (y % 2) ? 1 : 1;
-                    let r = data1[idx] * w1;
-                    let g = data1[idx + 1] * w1;
-                    let b = data1[idx + 2] * w1;
+                    let r = data1[idx] * w1 * a2;
+                    let g = data1[idx + 1] * w1 * a2;
+                    let b = data1[idx + 2] * w1 * a2;
                     let a = data1[idx + 3] * w1;
-                    let t = 1 * w1;
+                    let t = 1 * w1 * a2;
 
                     if (y > 0) {
                         const idx2 = ((y - 1) * width + x) * 4;
-                        r += data1[idx2] * w2 * .5;
-                        g += data1[idx2 + 1] * w2 * .5;
-                        b += data1[idx2 + 2] * w2 * .5;
+                        const a1 = data1[idx2 + 3] / 255;
+                        r += data1[idx2] * w2 * .5 * a1;
+                        g += data1[idx2 + 1] * w2 * .5 * a1;
+                        b += data1[idx2 + 2] * w2 * .5 * a1;
                         a += data1[idx2 + 3] * w2 * .5;
-                        t += .5 * w2;
+                        t += .5 * w2 * a1;
                     }
                     if (y + 1 < height) {
                         const idx3 = ((y + 1) * width + x) * 4;
-                        r += data1[idx3] * w2 * .5;
-                        g += data1[idx3 + 1] * w2 * .5;
-                        b += data1[idx3 + 2] * w2 * .5;
+                        const a1 = data1[idx3 + 3] / 255;
+                        r += data1[idx3] * w2 * .5 * a1;
+                        g += data1[idx3 + 1] * w2 * .5 * a1;
+                        b += data1[idx3 + 2] * w2 * .5 * a1;
                         a += data1[idx3 + 3] * w2 * .5;
-                        t += .5 * w2;
+                        t += .5 * w2 * a1;
                     }
-
-                    r = r / t;
-                    g = g / t;
-                    b = b / t;
-                    a = a / t;
+                    if (t > 0 && a > 0) {
+                        r = r / t;
+                        g = g / t;
+                        b = b / t;
+                        a = a / t;
+                    } else {
+                        r = 0;
+                        g = 0;
+                        b = 0;
+                        a = 0;
+                    }
                     data[idx] = r;
                     data[idx + 1] = g;
                     data[idx + 2] = b;
