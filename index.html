@@ -106,8 +106,13 @@
 
         document.getElementById("fileInput").addEventListener("change", handleFile);
 
+        const primaryFrac = .8;
+        const secondaryFrac = 1.2 / 2;
+
         function colours() {
             const colours = [];
+            const xPrime = 127.5 * primaryFrac;
+            const xSecondary = 127.5 * secondaryFrac;
             for (let index = 0; index < 64; index++) {
                 const r = index & 1;
                 const g = index >>> 1 & 1;
@@ -115,10 +120,11 @@
                 const c = index >>> 3 & 1;
                 const m = index >>> 4 & 1;
                 const y = index >>> 5 & 1;
+
                 const colour = [
-                    127 * r + 64 * m + 64 * y,
-                    127 * g + 64 * c + 64 * y,
-                    127 * b + 64 * c + 64 * m
+                    Math.floor(Math.min(255, xPrime * r + xSecondary * m + xSecondary * y)),
+                    Math.floor(Math.min(255, xPrime * g + xSecondary * y + xSecondary * c)),
+                    Math.floor(Math.min(255, xPrime * b + xSecondary * c + xSecondary * m))
                 ];
                 const hsl = rgbToHsl(colour[0], colour[1], colour[2]);
                 colours.push({
@@ -144,14 +150,25 @@
             return value.toString(16).padStart(2, '0');
         }
 
+        function hIsh(colour) {
+            return Math.floor(colour.h * 8 / 360);
+        }
+
         function createButtons() {
             const buttonRow = document.getElementById("buttonRow");
+            const sortedColours = [...referenceColours].sort((a, b) =>
+                (hIsh(a) - hIsh(b))
+                || (a.l - b.l)
+                || (a.s - b.s)
+                || (a.r - b.r)
+                || (a.g - b.g)
+                || (a.b - b.b));
             for (let i = 0; i < 64; i++) {
-                const colour = referenceColours[i];
+                const colour = sortedColours[i];
                 const button = document.createElement('button');
                 button.className = 'colourButton';
                 button.type = 'button';
-                button.setAttribute('i', i);
+                button.setAttribute('i', colour.index);
                 const background = `#${hex(colour.colour[0])}${hex(colour.colour[1])}${hex(colour.colour[2])}`;
                 button.style.background = background;
                 button.onclick = onButtonClick;
@@ -599,7 +616,7 @@
                         data[idx + 1] = (color[0] + color[2]) * .5;
                         data[idx + 2] = (color[0] + color[1]) * .5;
                     } else {
-                        data[idx] = color[0];
+                        data[idx] = color[0] * primaryFrac;
                         data[idx + 1] = color[1];
                         data[idx + 2] = color[2];
                     }
@@ -622,8 +639,8 @@
             for (let y = 0; y < height; y++) {
                 for (let x = 0; x < width; x++) {
                     const idx = (y * width + x) * 4;
-                    const w1 = (y % 2) ? 1 : 1;
-                    const w2 = (y % 2) ? 1 : 1;
+                    const w2 = (y % 2) ? primaryFrac : secondaryFrac * 2;
+                    const w1 = (y % 2) ? secondaryFrac * 2 : primaryFrac;
                     let r = data1[idx] * w1;
                     let g = data1[idx + 1] * w1;
                     let b = data1[idx + 2] * w1;
