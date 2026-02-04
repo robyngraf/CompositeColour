@@ -37,6 +37,11 @@
             padding: 0;
         }
 
+        .selected {
+            border-color: white;
+            border-style: solid;
+        }
+
         canvas {
             image-rendering: pixelated;
             display: block;
@@ -107,12 +112,12 @@
         document.getElementById("fileInput").addEventListener("change", handleFile);
 
         const primaryFrac = 1;
-        const secondaryFrac = 1 / 2;
+        const secondaryFrac = 1;
 
         function colours() {
             const colours = [];
             const xPrime = 127.5 * primaryFrac;
-            const xSecondary = 127.5 * secondaryFrac;
+            const xSecondary = 127.5 * secondaryFrac / 2;
             const xSecondary1 = xSecondary;
             const xSecondary2 = xSecondary;
             for (let index = 0; index < 64; index++) {
@@ -153,10 +158,6 @@
 
         function hex(value) {
             return value.toString(16).padStart(2, '0');
-        }
-
-        function hIsh(colour) {
-            return Math.floor(colour.h * 8 / 360);
         }
 
         function findUniqueColours() {
@@ -225,6 +226,12 @@
 
             var box = document.getElementById("currentColourBox");
             box.style.background = currentColour.l >= 50 ? "black" : "white";
+
+            const buttons = document.getElementById("buttonRow").children;
+            for (const thisButton of buttons) {
+                thisButton.classList.remove("selected");
+            }
+            button.classList.add("selected");
         }
 
         let startX;
@@ -667,8 +674,8 @@
             for (let y = 0; y < height; y++) {
                 for (let x = 0; x < width; x++) {
                     const idx = (y * width + x) * 4;
-                    const w2 = (y % 2) ? primaryFrac : secondaryFrac * 2;
-                    const w1 = (y % 2) ? secondaryFrac * 2 : primaryFrac;
+                    const w2 = (y % 2) ? primaryFrac : secondaryFrac;
+                    const w1 = (y % 2) ? secondaryFrac : primaryFrac;
                     let r = data1[idx] * w1;
                     let g = data1[idx + 1] * w1;
                     let b = data1[idx + 2] * w1;
