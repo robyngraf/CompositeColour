@@ -106,13 +106,15 @@
 
         document.getElementById("fileInput").addEventListener("change", handleFile);
 
-        const primaryFrac = .8;
-        const secondaryFrac = 1.2 / 2;
+        const primaryFrac = 1;
+        const secondaryFrac = 1 / 2;
 
         function colours() {
             const colours = [];
             const xPrime = 127.5 * primaryFrac;
             const xSecondary = 127.5 * secondaryFrac;
+            const xSecondary1 = xSecondary;
+            const xSecondary2 = xSecondary;
             for (let index = 0; index < 64; index++) {
                 const r = index & 1;
                 const g = index >>> 1 & 1;
@@ -122,9 +124,9 @@
                 const y = index >>> 5 & 1;
 
                 const colour = [
-                    Math.floor(Math.min(255, xPrime * r + xSecondary * m + xSecondary * y)),
-                    Math.floor(Math.min(255, xPrime * g + xSecondary * y + xSecondary * c)),
-                    Math.floor(Math.min(255, xPrime * b + xSecondary * c + xSecondary * m))
+                    Math.floor(Math.min(255, xPrime * r + xSecondary1 * m + xSecondary2 * y)),
+                    Math.floor(Math.min(255, xPrime * g + xSecondary1 * y + xSecondary2 * c)),
+                    Math.floor(Math.min(255, xPrime * b + xSecondary1 * c + xSecondary2 * m))
                 ];
                 const hsl = rgbToHsl(colour[0], colour[1], colour[2]);
                 colours.push({
