@@ -8,6 +8,7 @@
     <style>
         #buttonRow {
             width: 160px;
+            line-height: 0;
         }
 
         #currentColourBox {
@@ -99,7 +100,7 @@
     </div>
     <div style="width:160px">
         <label for="draw"><input type="radio" id="draw" name="tool" value="draw" checked>&nbsp;Draw</label>
-        <!-- Draw Behind? -->
+        <label for="drawBehind"><input type="radio" id="drawBehind" name="tool" value="drawBehind">&nbsp;Draw Behind</label>
         <!-- Erase Colour? -->
         <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
         <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool" value="fill">&nbsp;Fill</label>
@@ -238,6 +239,7 @@
         let startY;
         let isMouseDown;
         let isErase;
+        let isDrawBehind;
 
         function onCanvasLeave(event) {
             isMouseDown = false;
@@ -303,6 +305,8 @@
                         if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
                         const x1 = x + x2;
                         if (x1 < 0 || x1 >= width) continue;
+                        
+                        if (isDrawBehind && alphaBuffer[y1][x1]) continue;
                         colourBuffer[y1][x1] = colour;
                         alphaBuffer[y1][x1] = alpha;
                     }
@@ -319,6 +323,7 @@
             if (event.buttons > 1) return; // Left button or no button only
             const selectedTool = document.querySelector('input[name="tool"]:checked')?.value;
             isErase = selectedTool == "erase";
+            isDrawBehind = selectedTool == "drawBehind";
 
             const canvas = event.target;
             if (canvas.id == 'colour') renderColour();
@@ -359,6 +364,7 @@
                         const x1 = x + x2;
                         if (x1 < 0 || x1 >= width) continue;
                         const idx = (y1 * width + x1) * 4;
+                        if (isDrawBehind && data[idx + 3] > 0) continue;
                         data[idx] = r;
                         data[idx + 1] = g;
                         data[idx + 2] = b;
