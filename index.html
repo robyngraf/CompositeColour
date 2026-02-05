@@ -101,8 +101,8 @@
     <div style="width:160px">
         <label for="draw"><input type="radio" id="draw" name="tool" value="draw" checked>&nbsp;Draw</label>
         <label for="drawBehind"><input type="radio" id="drawBehind" name="tool" value="drawBehind">&nbsp;Draw Behind</label>
-        <!-- Erase Colour? -->
         <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
+        <label for="eraseColour"><input type="radio" id="eraseColour" name="tool" value="eraseColour">&nbsp;Erase Colour</label>
         <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool" value="fill">&nbsp;Fill</label>
     </div>
 
@@ -239,6 +239,7 @@
         let startY;
         let isMouseDown;
         let isErase;
+        let isEraseColour;
         let isDrawBehind;
 
         function onCanvasLeave(event) {
@@ -287,28 +288,65 @@
             isMouseDown = false;
             const canvas = event.target;
             const [endX, endY] = getMousePosition(event);
+            if (isEraseColour) {
+                const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-            const radiusSquared = brushRadius * brushRadius;
+                // Reset canvas image so we can read from it to determine where to erase
+                if (canvas.id == 'colour') renderColour();
+                if (canvas.id == 'bw') renderBw();
+                if (canvas.id == 'artifact') renderArtifactColors();
+                if (canvas.id == 'blur') renderArtifactColors();
+                if (canvas.id == 'original') {
+                    ctx.reset();
+                    if (img) ctx.drawImage(img, 0, 0, width, height);
+                }
+                
+                const imgData = ctx.getImageData(0, 0, width, height);
+                const data = imgData.data;
 
-            const colour = isErase ? 0 : currentColour.index;
-            const alpha = isErase ? 0 : 1;
+                const mouseIdx = (endY * width + endX) * 4;
+                const r = data[mouseIdx];
+                const g = data[mouseIdx + 1];
+                const b = data[mouseIdx + 2];
+                const a = data[mouseIdx + 3];
+                const threshold = 25;
+                if (!a) return;
 
-            // if len is 0, we draw 1 pixel
-            const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
-            for (let i = 0; i <= len; i++) {
-                const x = Math.round(startX + i * (endX - startX) / len);
-                const y = Math.round(startY + i * (endY - startY) / len);
-                for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
-                    const y1 = y + y2;
-                    if (y1 < 0 || y1 >= height) continue;
-                    for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
-                        if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
-                        const x1 = x + x2;
-                        if (x1 < 0 || x1 >= width) continue;
-                        
-                        if (isDrawBehind && alphaBuffer[y1][x1]) continue;
-                        colourBuffer[y1][x1] = colour;
-                        alphaBuffer[y1][x1] = alpha;
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) { 
+                        const idx = (y * width + x) * 4;
+                        if (Math.abs(data[idx] - r) > threshold) continue;
+                        if (Math.abs(data[idx + 1] - g) > threshold) continue;
+                        if (Math.abs(data[idx + 2] - b) > threshold) continue;
+                        if (Math.abs(data[idx + 3] - a) > threshold) continue;
+
+                        colourBuffer[y][x] = 0;
+                        alphaBuffer[y][x] = 0;
+                    }
+                }
+            } else {
+                const radiusSquared = brushRadius * brushRadius;
+
+                const colour = isErase ? 0 : currentColour.index;
+                const alpha = isErase ? 0 : 1;
+
+                // if len is 0, we draw 1 pixel
+                const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
+                for (let i = 0; i <= len; i++) {
+                    const x = Math.round(startX + i * (endX - startX) / len);
+                    const y = Math.round(startY + i * (endY - startY) / len);
+                    for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
+                        const y1 = y + y2;
+                        if (y1 < 0 || y1 >= height) continue;
+                        for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
+                            if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
+                            const x1 = x + x2;
+                            if (x1 < 0 || x1 >= width) continue;
+                            
+                            if (isDrawBehind && alphaBuffer[y1][x1]) continue;
+                            colourBuffer[y1][x1] = colour;
+                            alphaBuffer[y1][x1] = alpha;
+                        }
                     }
                 }
             }
@@ -323,13 +361,8 @@
             if (event.buttons > 1) return; // Left button or no button only
             const selectedTool = document.querySelector('input[name="tool"]:checked')?.value;
             isErase = selectedTool == "erase";
+            isEraseColour = selectedTool == "eraseColour";
             isDrawBehind = selectedTool == "drawBehind";
-
-            const canvas = event.target;
-            if (canvas.id == 'colour') renderColour();
-            if (canvas.id == 'bw') renderBw();
-            if (canvas.id == 'artifact') renderArtifactColors();
-            if (canvas.id == 'blur') renderArtifactColors();
 
             const [endX, endY] = getMousePosition(event);
             if (!isMouseDown) {
@@ -337,38 +370,70 @@
                 startY = endY;
             }
 
+            const canvas = event.target;
             const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+            if (canvas.id == 'colour') renderColour();
+            if (canvas.id == 'bw') renderBw();
+            if (canvas.id == 'artifact') renderArtifactColors();
+            if (canvas.id == 'blur') renderArtifactColors();
             if (canvas.id == 'original') {
                 ctx.reset();
                 if (img) ctx.drawImage(img, 0, 0, width, height);
             }
+
             const imgData = ctx.getImageData(0, 0, width, height);
             const data = imgData.data;
 
-            const radiusSquared = brushRadius * brushRadius;
-            const r = isErase ? 0 : currentColour.colour[0];
-            const g = isErase ? 0 : currentColour.colour[1];
-            const b = isErase ? 0 : currentColour.colour[2];
-            const a = isErase ? 0 : 255;
+            if (isEraseColour) {
+                const mouseIdx = (endY * width + endX) * 4;
+                const r = data[mouseIdx];
+                const g = data[mouseIdx + 1];
+                const b = data[mouseIdx + 2];
+                const a = data[mouseIdx + 3];
+                const threshold = 25;
+                if (!a) return;
 
-            // if len is 0, we draw 1 pixel
-            const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
-            for (let i = 0; i <= len; i++) {
-                const x = Math.round(startX + i * (endX - startX) / len);
-                const y = Math.round(startY + i * (endY - startY) / len);
-                for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
-                    const y1 = y + y2;
-                    if (y1 < 0 || y1 >= height) continue;
-                    for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
-                        if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
-                        const x1 = x + x2;
-                        if (x1 < 0 || x1 >= width) continue;
-                        const idx = (y1 * width + x1) * 4;
-                        if (isDrawBehind && data[idx + 3] > 0) continue;
-                        data[idx] = r;
-                        data[idx + 1] = g;
-                        data[idx + 2] = b;
-                        data[idx + 3] = a;
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const idx = (y * width + x) * 4;
+                        if (Math.abs(data[idx] - r) > threshold) continue;
+                        if (Math.abs(data[idx + 1] - g) > threshold) continue;
+                        if (Math.abs(data[idx + 2] - b) > threshold) continue;
+                        if (Math.abs(data[idx + 3] - a) > threshold) continue;
+                        
+                        data[idx] = 0;
+                        data[idx + 1] = 0;
+                        data[idx + 2] = 0;
+                        data[idx + 3] = 0;
+                    }
+                }
+            } else {
+                const radiusSquared = brushRadius * brushRadius;
+                const r = isErase ? 0 : currentColour.colour[0];
+                const g = isErase ? 0 : currentColour.colour[1];
+                const b = isErase ? 0 : currentColour.colour[2];
+                const a = isErase ? 0 : 255;
+
+                // if len is 0, we draw 1 pixel
+                const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
+                for (let i = 0; i <= len; i++) {
+                    const x = Math.round(startX + i * (endX - startX) / len);
+                    const y = Math.round(startY + i * (endY - startY) / len);
+                    for (let y2 = -brushRadius; y2 <= brushRadius; y2++) {
+                        const y1 = y + y2;
+                        if (y1 < 0 || y1 >= height) continue;
+                        for (let x2 = -brushRadius; x2 <= brushRadius; x2++) {
+                            if (Math.floor(x2 * x2 + y2 * y2 - 0.5) > radiusSquared) continue;
+                            const x1 = x + x2;
+                            if (x1 < 0 || x1 >= width) continue;
+                            const idx = (y1 * width + x1) * 4;
+                            if (isDrawBehind && data[idx + 3] > 0) continue;
+                            data[idx] = r;
+                            data[idx + 1] = g;
+                            data[idx + 2] = b;
+                            data[idx + 3] = a;
+                        }
                     }
                 }
             }
