@@ -6,7 +6,7 @@
 
     <title>Artifact Colors Editor</title>
     <style>
-        #buttonRow {
+        .buttonRow {
             width: 160px;
             line-height: 0;
         }
@@ -89,7 +89,7 @@
         <canvas id="artifact" width="48px" height="48px" style="display: none;" class="canvasBackground"> </canvas>
         <canvas id="blur" width="48px" height="48px" class="canvasBackground"> </canvas>
     </div>
-    <div id="buttonRow"> </div>
+    <div id="buttonRow" class="buttonRow"> </div>
     <div id="currentColourBox">
         <div id="currentColour"> </div>
     </div>
@@ -97,6 +97,9 @@
         <label for="radius">Brush Size:</label>
         <input type="range" id="radius" name="radius" min="0" max="49" value="2" style="width:55px">
         <span id="radius-value">3</span>
+    </div>
+    <button id="generateGradient" type="button">Generate Gradient</button>
+    <div id="buttonRow2" class="buttonRow">
     </div>
     <div style="width:160px">
         <label for="draw"><input type="radio" id="draw" name="tool" value="draw" checked>&nbsp;Draw</label>
@@ -187,18 +190,22 @@
                 || (a.l - b.l));
             for (let i = 0; i < sortedColours.length; i++) {
                 const colour = sortedColours[i];
-                const button = document.createElement('button');
-                button.className = 'colourButton';
-                button.type = 'button';
-                button.setAttribute('i', colour.index);
-                const background = `#${hex(colour.colour[0])}${hex(colour.colour[1])}${hex(colour.colour[2])}`;
-                button.style.background = background;
-                if (colours == duplicateColours) {
-                    button.style.borderColor = "white";
-                }
-                button.onclick = onButtonClick;
-                buttonRow.appendChild(button);
+                createButton(buttonRow, colour, colours == duplicateColours);
             }
+        }
+
+        function createButton(buttonRow, colour, isDuplicate) {
+            const button = document.createElement('button');
+            button.className = 'colourButton';
+            button.type = 'button';
+            button.setAttribute('i', colour.index);
+            const background = `#${hex(colour.colour[0])}${hex(colour.colour[1])}${hex(colour.colour[2])}`;
+            button.style.background = background;
+            if (isDuplicate) {
+                button.style.borderColor = "white";
+            }
+            button.onclick = onButtonClick;
+            buttonRow.appendChild(button);
         }
 
         let currentColour = referenceColours[0];
@@ -217,6 +224,12 @@
         document.getElementById("radius").oninput = setPreviewRadius;
         setPreviewRadius();
 
+        function onGenerateGradientClick() {
+            generateGradient(currentColour);
+        }
+
+        document.getElementById("generateGradient").onclick = onGenerateGradientClick;
+
         function onButtonClick(event) {
             const button = event.target;
             const i = parseInt(button.getAttribute('i'));
@@ -229,10 +242,87 @@
             box.style.background = currentColour.l >= 50 ? "black" : "white";
 
             const buttons = document.getElementById("buttonRow").children;
-            for (const thisButton of buttons) {
-                thisButton.classList.remove("selected");
+            const buttons2 = document.getElementById("buttonRow2").children;
+            for (const thisButton of [...buttons, ...buttons2]) {
+                if (thisButton.getAttribute('i') == i) {
+                    thisButton.classList.add("selected");
+                } else {
+                    thisButton.classList.remove("selected");
+                }
             }
-            button.classList.add("selected");
+        }
+
+        function generateGradient(targetColour) {
+            var row = document.getElementById("buttonRow2");
+            row.innerHTML = "";
+            let gradient = [targetColour];
+            let c = structuredClone(targetColour);
+            let bits = ["r", "g", "b", "c", "m", "y"];
+            shuffleArray(bits);
+
+            // find darker colours
+            while (bitLuma(c) > 0) {
+                for (const bit of bits) {
+                    if (c[bit])
+                    {
+                        c[bit] = 0;
+                        gradient.push(findColour(c));
+                        break;
+                    }
+                }
+            }
+
+            gradient.reverse();
+
+            // find lighter colours
+            c = structuredClone(targetColour);
+            while (bitLuma(c) < 6) {
+                for (const bit of bits) {
+                    if (!c[bit]) {
+                        c[bit] = 1;
+                        gradient.push(findColour(c));
+                        break;
+                    }
+                }
+            }
+            for (const colour of gradient) {
+                createButton(row, colour, false);
+            }
+        }
+
+        function findColour(c) {
+            let bits = ["r", "g", "b", "c", "m", "y"];
+            for (const color of referenceColours) {
+                let possibleMatch = true;
+                for (const bit of bits) {
+                    if (c[bit] != color[bit]){
+                        possibleMatch = false;
+                        break;
+                    }
+                }
+                if (possibleMatch) {
+                    return color;
+                }
+            }
+        }
+
+        function bitLuma(c) {
+            return c.r + c.g + c.b + c.c + c.m + c.y;
+        }
+
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+
+            // While there remain elements to shuffle.
+            while (currentIndex !== 0) {
+                // Pick a remaining element.
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+
+                // And swap it with the current element.
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex], array[currentIndex]];
+            }
         }
 
         let startX;
