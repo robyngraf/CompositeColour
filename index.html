@@ -10,6 +10,10 @@
             width: 160px;
             line-height: 0;
         }
+        
+        #buttonRow3 {
+            width: 140px;
+        }
 
         #currentColourBox {
             display: flex;
@@ -38,9 +42,23 @@
             padding: 0;
         }
 
-        .selected {
+        .duplicate {
             border-color: white;
+        }
+
+        .selected {
+            border-color: lightgrey;
             border-style: solid;
+            position: relative;
+        }
+
+        .selected::after {
+            content: "*";
+            position: absolute;
+        }
+
+        .gradient {
+            border-color: lightcoral;
         }
 
         canvas {
@@ -107,6 +125,8 @@
         <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
         <label for="eraseColour"><input type="radio" id="eraseColour" name="tool" value="eraseColour">&nbsp;Erase Colour</label>
         <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool" value="fill">&nbsp;Fill</label>
+    </div>
+    <div id="buttonRow3" class="buttonRow">
     </div>
 
     <script>
@@ -194,15 +214,88 @@
             }
         }
 
-        function createButton(buttonRow, colour, isDuplicate) {
+        function hueDiff(a, b) {
+            const diff = Math.abs(a.h - b.h);
+            return diff <= 180 ? diff : 360 - diff;
+        }
+
+        let stockGradients = [];
+
+        function createManyGradients() {
+            const buttonRow3 = document.getElementById("buttonRow3");
+            const bits = ["r", "g", "b", "c", "m", "y"];
+            const gradientBitLists = getPermutations(bits).map(l => l.slice(0, -1));
+            let gradients = [];
+            for (const gradientBits of gradientBitLists) {
+                const c = { r: 0, g: 0, b: 0, c: 0, m: 0, y: 0 };
+                let gradient = [];
+                for (bit of gradientBits) {
+                    c[bit] = 1;
+                    gradient.push(findColour(c));
+                }
+                let looksOK = true;
+                const midColour = gradient[2];
+                if (midColour.r == midColour.g && midColour.r == midColour.b && midColour.c == midColour.m && midColour.c == midColour.y) {
+                    // grey
+                    continue;
+                }
+                let cumulativeDiff = 0; 
+                for (let i = 1; i < gradient.length; i++) {
+                    const prevColour = gradient[i - 1];
+                    const colour = gradient[i];
+                    const diff = hueDiff(prevColour, colour);
+                    cumulativeDiff += diff;
+                    if (diff > 40 || cumulativeDiff > 100) {
+                        looksOK = false;
+                        continue;
+                    }
+                }
+                if (!looksOK) continue;
+                gradient = [referenceColours[0], ...gradient, referenceColours[63]];
+                gradients.push(gradient);
+            }
+            stockGradients = [gradients[2], gradients[3], gradients[14], gradients[15], gradients[18], gradients[19]];
+            for (let i = 0; i < stockGradients.length; i++) {
+                const gradient = stockGradients[i];
+                for (const colour of gradient) {
+                    createButton(buttonRow3, colour, false, i);
+                }
+            }
+        }
+
+        const getPermutations = arr => {
+            // Base case: if the array is empty, return an array with an empty array inside
+            if (arr.length === 0) return [[]];
+
+            const results = [];
+
+            for (let i = 0; i < arr.length; i++) {
+                const currentItem = arr[i];
+                // Create a remaining array by excluding the current item
+                const remainingItems = [...arr.slice(0, i), ...arr.slice(i + 1)];
+
+                // Recursively get permutations of the remaining items
+                const remainingPermutations = getPermutations(remainingItems);
+
+                // Combine the current item with each of the remaining permutations
+                for (const permutation of remainingPermutations) {
+                    results.push([currentItem, ...permutation]);
+                }
+            }
+
+            return results;
+        };
+
+        function createButton(buttonRow, colour, isDuplicate, gradientIndex) {
             const button = document.createElement('button');
             button.className = 'colourButton';
             button.type = 'button';
             button.setAttribute('i', colour.index);
+            if (gradientIndex != null) button.setAttribute('g', gradientIndex);
             const background = `#${hex(colour.colour[0])}${hex(colour.colour[1])}${hex(colour.colour[2])}`;
             button.style.background = background;
             if (isDuplicate) {
-                button.style.borderColor = "white";
+                button.classList.add("duplicate");
             }
             button.onclick = onButtonClick;
             buttonRow.appendChild(button);
@@ -230,6 +323,8 @@
 
         document.getElementById("generateGradient").onclick = onGenerateGradientClick;
 
+        let currentGradient = null;
+
         function onButtonClick(event) {
             const button = event.target;
             const i = parseInt(button.getAttribute('i'));
@@ -241,9 +336,18 @@
             var box = document.getElementById("currentColourBox");
             box.style.background = currentColour.l >= 50 ? "black" : "white";
 
+            const gradientIndex = button.getAttribute('g');
+            currentGradient = gradientIndex;
+
             const buttons = document.getElementById("buttonRow").children;
             const buttons2 = document.getElementById("buttonRow2").children;
-            for (const thisButton of [...buttons, ...buttons2]) {
+            const buttons3 = document.getElementById("buttonRow3").children;
+            for (const thisButton of [...buttons, ...buttons2, ...buttons3]) {
+                if (gradientIndex !== null && thisButton.getAttribute('g') == gradientIndex) {
+                    thisButton.classList.add("gradient");
+                } else {
+                    thisButton.classList.remove("gradient");
+                }
                 if (thisButton.getAttribute('i') == i) {
                     thisButton.classList.add("selected");
                 } else {
@@ -251,6 +355,8 @@
                 }
             }
         }
+
+        let customGradient;
 
         function generateGradient(targetColour) {
             var row = document.getElementById("buttonRow2");
@@ -286,8 +392,9 @@
                 }
             }
             for (const colour of gradient) {
-                createButton(row, colour, false);
+                createButton(row, colour, false, -1);
             }
+            customGradient = gradient;
         }
 
         function findColour(c) {
@@ -541,6 +648,7 @@
 
         createButtons(uniqueColours);
         createButtons(duplicateColours);
+        createManyGradients();
 
         /**
          * Creates a 2D array (matrix) of a given width and height, filled with a specific value.
