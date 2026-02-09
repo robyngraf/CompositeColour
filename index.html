@@ -187,7 +187,8 @@
         }
 
         function findUniqueColours() {
-            for (const colour of referenceColours) {
+            const allColours = referenceColours.toReversed();
+            for (const colour of allColours) {
                 let isUnique = true;
                 for (const uniqueColour of uniqueColours) {
                     const diff = diffBetweenColours(colour, uniqueColour);
@@ -815,7 +816,7 @@
                 (aColour[2] - bColour[2]) * 1,
                 a.l - b.l,
                 (a.s - b.s) * 2,
-                ((a.h + 360 - b.h) % 360) * Math.max(0, a.s - 10) / 360
+                hueDiff(a, b) * Math.max(0, a.s - 10) * Math.max(0, b.s - 10) / 9000
             ];
             const dist = diff.reduce((a, v) => a + v * v, 0);
             return dist;
