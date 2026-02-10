@@ -709,9 +709,8 @@
         }
 
         function processImage() {
-            const originalCanvas = document.getElementById("original");
-            const originalCtx = originalCanvas.getContext("2d", { willReadFrequently: true });
-            const imgData = originalCtx.getImageData(0, 0, width, height);
+            const ctx = img.getContext("2d", { willReadFrequently: true });
+            const imgData = ctx.getImageData(0, 0, width, height);
 
             let colourSet = uniqueColours;
             if (currentGradient != null) {
@@ -825,7 +824,8 @@
             width = upng.width;
             height = upng.height;
 
-            // TODO: a method of clearing the original image without clearing everything
+            img = new OffscreenCanvas(width, height);
+
             colourBuffer = createMatrix(height, width);
             monoBuffer = createMatrix(height, width);
             alphaBuffer = createMatrix(height, width);
@@ -845,13 +845,10 @@
                         alphaBuffer[y][x] = isTrans ? 0 : 1;
                     }
                 }
-                renderColour("original");
+                renderColour(img);
             } else {
                 // Any other PNG
-                const originalCanvas = document.getElementById("original");
-                originalCanvas.width = width;
-                originalCanvas.height = height;
-                const ctx = originalCanvas.getContext("2d", { willReadFrequently: true });
+                const ctx = img.getContext("2d", { willReadFrequently: true });
                 const imgData = ctx.createImageData(width, height);
                 const data = imgData.data;
 
@@ -873,6 +870,11 @@
                 ctx.putImageData(imgData, 0, 0);
                 processImage();
             }
+
+            const originalCanvas = document.getElementById("original");
+            const originalCtx = originalCanvas.getContext("2d", { willReadFrequently: true });
+            originalCtx.reset();
+            originalCtx.drawImage(img, 0, 0, width, height);
         }
 
         function pngUsesCorrectPalette(upng) {
@@ -965,8 +967,8 @@
             };
         }
 
-        function renderColour(canvasName) {
-            const canvas = document.getElementById(canvasName || "colour");
+        function renderColour(canvas) {
+            canvas = canvas || document.getElementById("colour");
             canvas.width = width;
             canvas.height = height;
             const ctx = canvas.getContext("2d", { willReadFrequently: true });
