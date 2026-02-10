@@ -99,7 +99,7 @@
 </head>
 
 <body>
-    <input type="file" id="fileInput" accept="image/png">
+    <input type="file" id="fileInput" accept="image/*">
     <button id="reload" type="button">Reprocess</button>
     <button id="save" type="button">Save</button>
     <div>
@@ -448,11 +448,7 @@
             if (canvas.id == "original") {
                 const ctx = canvas.getContext("2d", { willReadFrequently: true });
                 ctx.reset();
-                if (img) {
-                    ctx.drawImage(img, 0, 0, width, height);
-                } else if (fileData) {
-                    readFile();
-                }
+                if (img) ctx.drawImage(img, 0, 0, width, height);
             }
             if (canvas.id == "colour") renderColour();
             if (canvas.id == "bw") renderBw();
@@ -502,11 +498,7 @@
                 if (canvas.id == "blur") renderArtifactColors();
                 if (canvas.id == "original") {
                     ctx.reset();
-                    if (img) {
-                        ctx.drawImage(img, 0, 0, width, height);
-                    } else if (fileData) {
-                        readFile();
-                    }
+                    if (img) ctx.drawImage(img, 0, 0, width, height);
                 }
                 
                 const imgData = ctx.getImageData(0, 0, width, height);
@@ -587,11 +579,7 @@
             if (canvas.id == "blur") renderArtifactColors();
             if (canvas.id == "original") {
                 ctx.reset();
-                if (img) {
-                    ctx.drawImage(img, 0, 0, width, height);
-                } else if (fileData) {
-                    readFile();
-                }
+                if (img) ctx.drawImage(img, 0, 0, width, height);
             }
 
             const imgData = ctx.getImageData(0, 0, width, height);
@@ -794,8 +782,9 @@
             hiddenElement.click();
         }
 
+        let file;
         function handleFile(event) {
-            const file = event.target.files[0];
+            file = event.target.files[0];
             if (!file) return;
             
             var reader = new FileReader();
@@ -804,35 +793,45 @@
         }
 
         let fileData;
-
-        function onFileLoaded(event) {
+        async function onFileLoaded(event) {
             fileData = event.target.result;
-            readFile();
+            await readFile();
 
             renderColour();
             renderToMonoBuffer();
             renderBw();
             renderArtifactColors();
         }
-        
 
-        function readFile() {
+        async function readFile() {
             img = null;
 
-            // TODO: open non PNG files?
-            const upng = UPNG.decode(fileData);
-            width = upng.width;
-            height = upng.height;
+            let upng;
+            let otherImage;
+            let isPngAndUsesCorrectPalette;
+            try {
+                upng = UPNG.decode(fileData);
+                isPngAndUsesCorrectPalette = pngUsesCorrectPalette(upng);
+            } catch {
+                isPngAndUsesCorrectPalette = false;
+            }
+
+            if (isPngAndUsesCorrectPalette) {
+                width = upng.width;
+                height = upng.height;
+            } else {
+                otherImage = await createImageBitmap(file);
+                width = otherImage.width;
+                height = otherImage.height;
+            }
 
             img = new OffscreenCanvas(width, height);
-
             colourBuffer = createMatrix(height, width);
             monoBuffer = createMatrix(height, width);
             alphaBuffer = createMatrix(height, width);
 
-            if (pngUsesCorrectPalette(upng)) {
-                // paletted data
-                const data = upng.data;
+            if (isPngAndUsesCorrectPalette) {
+                const data = upng.data; // this is a list of palette indices
 
                 for (let y = 0; y < height; y++) {
                     const colourRow = colourBuffer[y];
@@ -840,38 +839,24 @@
                     for (let x = 0; x < width; x++) {
                         const index = y * width + x;
                         const colourIndex = data[index];
-                        const isTrans = colourIndex == 64;
+                        const isTrans = colourIndex == 64; // transparent is colour 64 in the palette
                         colourBuffer[y][x] = isTrans ? 0 : colourIndex;
                         alphaBuffer[y][x] = isTrans ? 0 : 1;
                     }
                 }
+                // draw colourBuffer & alphaBuffer to the offscreenCanvas
                 renderColour(img);
-            } else {
-                // Any other PNG
-                const ctx = img.getContext("2d", { willReadFrequently: true });
-                const imgData = ctx.createImageData(width, height);
-                const data = imgData.data;
-
-                const rgbaData = new Uint8Array(UPNG.toRGBA8(upng)[0]);
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        const idx = (y * width + x) * 4;
-                        const r = rgbaData[idx];
-                        const g = rgbaData[idx + 1];
-                        const b = rgbaData[idx + 2];
-                        const a = rgbaData[idx + 3];
-                        data[idx] = r;
-                        data[idx + 1] = g;
-                        data[idx + 2] = b;
-                        data[idx + 3] = a;
-                    }
-                }
-                
-                ctx.putImageData(imgData, 0, 0);
+            } else { // not PNG or not correct palette
+                const ctx = img.getContext("2d");
+                // just draw the image to the offscreenCanvas
+                ctx.drawImage(otherImage, 0, 0, width, height);
                 processImage();
             }
 
+            // Draw image to original canvas
             const originalCanvas = document.getElementById("original");
+            originalCanvas.width = width;
+            originalCanvas.height = height;
             const originalCtx = originalCanvas.getContext("2d", { willReadFrequently: true });
             originalCtx.reset();
             originalCtx.drawImage(img, 0, 0, width, height);
