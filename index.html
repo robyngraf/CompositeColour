@@ -956,7 +956,16 @@
                 width = upng.width;
                 height = upng.height;
             } else {
-                otherImage = await createImageBitmap(file);
+                if (file.type = 'image/svg+xml') {
+                    const svgUrl = URL.createObjectURL(file);
+                    const image = new Image();
+                    image.src = svgUrl;
+                    await image.decode();
+                    otherImage = await createImageBitmap(image, { resizeWidth: width, resizeHeight: height});
+                    URL.revokeObjectURL(svgUrl);
+                } else {
+                    otherImage = await createImageBitmap(file);
+                }
                 width = otherImage.width;
                 height = otherImage.height;
             }
