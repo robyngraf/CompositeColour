@@ -961,7 +961,7 @@
                     const image = new Image();
                     image.src = svgUrl;
                     await image.decode();
-                    otherImage = await createImageBitmap(image, { resizeWidth: width, resizeHeight: height});
+                    otherImage = await createImageBitmap(image, { resizeHeight: height});
                     URL.revokeObjectURL(svgUrl);
                 } else {
                     otherImage = await createImageBitmap(file);
