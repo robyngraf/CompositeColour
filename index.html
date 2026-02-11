@@ -105,7 +105,7 @@
     <input type="file" id="fileInput" accept="image/*">
     <button id="reload" type="button">Reprocess</button>
     <button id="save" type="button">Save Master</button>
-    <button id="saveBW" type="button">Save BW</button>
+    <button id="saveBW" type="button" style="display: none;">Save BW</button>
     <div>
         <canvas id="original" width="48px" height="48px" class="canvasBackground"> </canvas>
         <canvas id="colour" width="48px" height="48px" class="canvasBackground"> </canvas>
@@ -122,6 +122,9 @@
         <input type="range" id="radius" name="radius" min="0" max="49" value="2" style="width:55px">
         <span id="radius-value">3</span>
     </div>
+    Colours with minimal glitching when next to current colour:
+    <div id="buttonRow4" class="buttonRow">
+    </div><br>
     <button id="generateGradient" type="button">Generate Gradient</button>
     <div id="buttonRow2" class="buttonRow">
     </div>
@@ -206,11 +209,12 @@
             }
         }
 
+        function hAdjust(h) {
+            return (h + 20) % 360;
+        }
+
         function createButtons(colours) {
             const buttonRow = document.getElementById("buttonRow");
-            function hAdjust(h) {
-                return (h + 20) % 360;
-            }
             const sortedColours = [...colours].sort((a, b) =>
                 (a.s == 0 ? 1: 0) - (b.s == 0 ? 1 : 0)
                 || (hAdjust(a.h) - hAdjust(b.h))
@@ -330,12 +334,36 @@
 
         document.getElementById("generateGradient").onclick = onGenerateGradientClick;
 
+        function generateNeighbours() {
+            var row = document.getElementById("buttonRow4");
+            row.innerHTML = "";
+            let colours = [];
+            let bits = ["r", "g", "b", "c", "m", "y"];
+
+            for (const bit of bits) {
+                const c = structuredClone(currentColour);
+                c[bit] = 1 - c[bit];
+                colours.push(findColour(c));
+            }
+            colours.sort((a, b) =>
+                (a.s == 0 ? 1 : 0) - (b.s == 0 ? 1 : 0)
+                || (hAdjust(a.h) - hAdjust(b.h))
+                || (a.l - b.l));
+
+            for (const colour of colours) {
+                createButton(row, colour, false, -1);
+            }
+        }
+
         let currentGradient = null;
 
         function onColourButtonClick(event) {
             const button = event.target;
             const i = parseInt(button.getAttribute("i"));
             currentColour = referenceColours[i];
+
+            generateNeighbours();
+
             var div = document.getElementById("currentColour");
             const background = `#${hex(currentColour.colour[0])}${hex(currentColour.colour[1])}${hex(currentColour.colour[2])}`;
             div.style.background = background;
@@ -349,7 +377,8 @@
             const buttons = document.getElementById("buttonRow").children;
             const buttons2 = document.getElementById("buttonRow2").children;
             const buttons3 = document.getElementById("buttonRow3").children;
-            for (const thisButton of [...buttons, ...buttons2, ...buttons3]) {
+            const buttons4 = document.getElementById("buttonRow4").children;
+            for (const thisButton of [...buttons, ...buttons2, ...buttons3, ...buttons4]) {
                 if (gradientIndex !== null && thisButton.getAttribute("g") == gradientIndex) {
                     thisButton.classList.add("gradient");
                 } else {
