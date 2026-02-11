@@ -134,6 +134,7 @@
         <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
         <label for="eraseColour"><input type="radio" id="eraseColour" name="tool" value="eraseColour">&nbsp;Erase Colour</label>
         <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool" value="fill">&nbsp;Fill</label>
+        <label for="pickColour"><input type="radio" id="pickColour" name="tool" value="pickColour">&nbsp;Pick Colour</label>
     </div>
     <div id="buttonRow3" class="buttonRow">
     </div>
@@ -351,16 +352,15 @@
                 || (a.l - b.l));
 
             for (const colour of colours) {
-                createButton(row, colour, false, -1);
+                createButton(row, colour, false);
             }
         }
 
         let currentGradient = null;
 
-        function onColourButtonClick(event) {
-            const button = event.target;
-            const i = parseInt(button.getAttribute("i"));
-            currentColour = referenceColours[i];
+        function changeCurrentColour(colourIndex) {
+            currentColour = referenceColours[colourIndex];
+            gradientIndex = null;
 
             generateNeighbours();
 
@@ -370,9 +370,6 @@
 
             var box = document.getElementById("currentColourBox");
             box.style.background = currentColour.l >= 50 ? "black" : "white";
-
-            const gradientIndex = button.getAttribute("g");
-            currentGradient = gradientIndex;
 
             const buttons = document.getElementById("buttonRow").children;
             const buttons2 = document.getElementById("buttonRow2").children;
@@ -384,12 +381,20 @@
                 } else {
                     thisButton.classList.remove("gradient");
                 }
-                if (thisButton.getAttribute("i") == i) {
+                if (thisButton.getAttribute("i") == colourIndex) {
                     thisButton.classList.add("selected");
                 } else {
                     thisButton.classList.remove("selected");
                 }
             }
+        }
+
+        function onColourButtonClick(event) {
+            const button = event.target;
+            const i = parseInt(button.getAttribute("i"));
+            changeCurrentColour(i);
+            const gradientIndex = button.getAttribute("g");
+            currentGradient = gradientIndex;
         }
 
         let customGradient;
@@ -474,6 +479,7 @@
         let isErase;
         let isEraseColour;
         let isDrawBehind;
+        let isPickColour;
 
         function onCanvasLeave(event) {
             isMouseDown = false;
@@ -557,6 +563,35 @@
                         alphaBuffer[y][x] = 0;
                     }
                 }
+            } else if (isPickColour) {
+                if (canvas.id == "colour" || canvas.id == "bw") {
+                    // Reset canvas image so we can read from it to determine colour
+                    if (canvas.id == "colour") renderColour();
+                    if (canvas.id == "bw") renderBw();
+                    const isTransparent = !alphaBuffer[endY][endX];
+                    if (isTransparent) return;
+                    const c = colourBuffer[endY][endX];
+                    changeCurrentColour(c);
+                } else {
+                    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+                    // Reset canvas image so we can read from it to determine colour
+                    if (canvas.id == "artifact") renderArtifactColors();
+                    if (canvas.id == "blur") renderArtifactColors();
+                    if (canvas.id == "original") {
+                        ctx.reset();
+                        if (img) ctx.drawImage(img, 0, 0, width, height);
+                    }
+                    const imgData = ctx.getImageData(0, 0, width, height);
+                    const data = imgData.data;
+                    const idx = (endY * width + endX) * 4;
+                    const isTransparent = data[idx + 3] < 10;
+                    if (isTransparent) return;
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
+                    const c = rgbToNearestPaletteColour(r, g, b, uniqueColours);
+                    changeCurrentColour(c);
+                }
             } else {
                 const radiusSquared = brushRadius * brushRadius;
 
@@ -596,6 +631,7 @@
             isErase = selectedTool == "erase";
             isEraseColour = selectedTool == "eraseColour";
             isDrawBehind = selectedTool == "drawBehind";
+            isPickColour = selectedTool == "pickColour";
 
             const [endX, endY] = getMousePosition(event);
             if (!isMouseDown) {
@@ -640,6 +676,26 @@
                         data[idx + 2] = 0;
                         data[idx + 3] = 0;
                     }
+                }
+            } else if (isPickColour) {
+                const points = [[-1, -1], [1, -1], [1, 1], [-1, 1], [-2, 0], [0, -2], [2, 0], [0, 2]];
+                const idx = (endY * width + endX) * 4;
+                const isTransparent = data[idx + 3] < 10;
+                if (isTransparent) return;
+                for (const [x, y] of points) {
+                    const x1 = endX + x;
+                    const y1 = endY + y;
+                    if (x1 < 0) continue;
+                    if (y1 < 0) continue;
+                    if (x1 >= width) continue;
+                    if (y1 >= height) continue;
+                    const idx2 = (y1 * width + x1) * 4;
+                    const isWhite = data[idx2] + data[idx2 + 1] + data[idx2 + 2] <= 382;
+                    const colour = isWhite ? 255 : 0;
+                    data[idx2] = colour;
+                    data[idx2 + 1] = colour;
+                    data[idx2 + 2] = colour;
+                    data[idx2 + 3] = 255;
                 }
             } else {
                 const radiusSquared = brushRadius * brushRadius;
@@ -729,6 +785,33 @@
             }
         }
 
+        function rgbToColour(r, g, b) {
+            const hsl = rgbToHsl(r, g, b);
+            return { colour: [r, g, b], h: hsl.h, s: hsl.s, l: hsl.l };
+        }
+
+        function rgbToNearestPaletteColour(r, g, b, palette) {
+            // NB this assumes that black and white are always in the palette
+            if (Math.max(r, g, b) < 32) {
+                return 0; // black
+            } else if (Math.min(r, g, bitLuma) > 224) {
+                return 63; // white
+            } else {
+                const c = rgbToColour(r, g, b);
+                let result = 0;
+                let maxDist = Number.MAX_SAFE_INTEGER;
+                for (const referenceColour of palette) {
+                    const dist = diffBetweenColours(c, referenceColour);
+
+                    if (dist < maxDist) {
+                        maxDist = dist;
+                        result = referenceColour.index;
+                    }
+                }
+                return result;
+            }
+        }
+
         function processImage() {
             const ctx = img.getContext("2d", { willReadFrequently: true });
             const imgData = ctx.getImageData(0, 0, width, height);
@@ -754,30 +837,7 @@
                     const gImg = imgData.data[idx + 1];
                     const bImg = imgData.data[idx + 2];
                     alphaRow[x] = imgData.data[idx + 3] > 127 ? 1 : 0;
-                    let result;
-                    if (Math.max(rImg, gImg, bImg) < 32) {
-                        result = 0; // black
-                    } else if (Math.min(rImg, gImg, bImg) > 224) {
-                        result = 63; // white
-                    } else {
-                        const color = [rImg, gImg, bImg];
-                        const hslImg = rgbToHsl(rImg, gImg, bImg);
-                        const c = { colour: color, h: hslImg.h, s: hslImg.s, l: hslImg.l };
-                        const phase = x % 3;
-                        const phase2 = (x + 1) % 3;
-                        const phase3 = (x + 2) % 3;
-
-                        let maxDist = Number.MAX_SAFE_INTEGER;
-                        for (const referenceColour of colourSet) {
-                            const dist = diffBetweenColours(c, referenceColour);
-
-                            if (dist < maxDist) {
-                                maxDist = dist;
-                                result = referenceColour.index;
-                            }
-                        }
-                    }
-                    colourRow[x] = result;
+                    colourRow[x] = rgbToNearestPaletteColour(rImg, gImg, bImg, colourSet);
                 }
             }
             renderColour();
