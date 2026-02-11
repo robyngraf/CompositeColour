@@ -99,9 +99,13 @@
 </head>
 
 <body>
+    <p>
+        File load/save functionality won't work unless you save this HTML file to your computer. Also might not work in FireFox.
+    </p>
     <input type="file" id="fileInput" accept="image/*">
     <button id="reload" type="button">Reprocess</button>
-    <button id="save" type="button">Save</button>
+    <button id="save" type="button">Save Master</button>
+    <button id="saveBW" type="button">Save BW</button>
     <div>
         <canvas id="original" width="48px" height="48px" class="canvasBackground"> </canvas>
         <canvas id="colour" width="48px" height="48px" class="canvasBackground"> </canvas>
@@ -757,7 +761,7 @@
 
         document.getElementById("save").onclick = save;
 
-        function save() {
+        async function save() {
             const palette = [...referenceColours.flatMap(c => c.colour), 0, 0, 0];
             const pixelData = new Uint8Array(width * height);
             
@@ -775,6 +779,20 @@
                 tRNS: [...Array(64).fill(255), 0]
             };
 
+            const mimeType = "image/png";
+            const promise = window.showSaveFilePicker({
+                startIn: "downloads",
+                suggestedName: fileName || "main.png", // Suggest a default file name
+                types: [
+                    {
+                        description: 'PNG',
+                        accept: {
+                            [mimeType]: ['.png'], // Specify acceptable file extensions
+                        },
+                    },
+                ],
+            });
+
             const png = UPNG.encodeLL(
                 [pixelData], // frames
                 width,
@@ -786,9 +804,17 @@
                 tabs,
                 false // Compress
             );
-            downloadPng("main.png", png);
+            
+            const blob = new Blob([png], { type: mimeType });
+            const handle = await promise;
+            const writableStream = await handle.createWritable();
+            await writableStream.write(blob);
+            await writableStream.close();
+
+            //downloadPng("main.png", png);
         }
 
+        /*
         function downloadPng(name, png) {
             const uint8Array = new Uint8Array(png);
             const base64String = uint8Array.toBase64();
@@ -799,8 +825,10 @@
             hiddenElement.download = name;
             hiddenElement.click();
         }
+        */
 
         let file;
+        let fileName;
         function handleFile(event) {
             file = event.target.files[0];
             if (!file) return;
@@ -808,6 +836,7 @@
             var reader = new FileReader();
             reader.addEventListener('load', onFileLoaded);
             reader.readAsArrayBuffer(file);
+            fileName = file.name;
         }
 
         let fileData;
