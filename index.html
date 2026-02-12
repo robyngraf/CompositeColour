@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Shittifier</title>
     <style>
@@ -110,7 +111,7 @@
     <button id="save" type="button">Save Master</button>
     <button id="saveBW" type="button" style="display: none;">Save BW</button>
     <button id="changeSize" type="button">Unembiggen</button>
-    <div>
+    <div id="canvasArea">
         <canvas id="original" width="48px" height="48px" class="canvasBackground"> </canvas>
         <canvas id="colour" width="48px" height="48px" class="canvasBackground"> </canvas>
         <div class="canvasBackground"><canvas id="bw" width="48px" height="48px" class="green"> </canvas></div>
@@ -858,11 +859,19 @@
         
         document.getElementById("changeSize").onclick = changeSize;
 
+        let isBig = true;
+
         function changeSize() {
+            isBig = !isBig;
             const canvases = document.querySelectorAll('.canvasBackground');
             for (const canvas of canvases) {
-                canvas.style.zoom = 1;
+                canvas.style.zoom = isBig ? 4 : 1;
             }
+            document.getElementById("changeSize").innerText = isBig ? "Unembiggen" : "Reëmbiggen";
+        }
+
+        if (window.devicePixelRatio != 1) {
+            document.getElementById("canvasArea").style.zoom = 1 / window.devicePixelRatio;
         }
 
         document.getElementById("save").onclick = save;
