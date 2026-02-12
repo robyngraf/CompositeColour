@@ -109,7 +109,7 @@
     <input type="file" id="fileInput" accept="image/*">
     <button id="reload" type="button">Reprocess</button>
     <button id="save" type="button">Save Master</button>
-    <button id="saveBW" type="button" style="display: none;">Save BW</button>
+    <button id="saveBW" type="button">Save BW</button>
     <button id="changeSize" type="button">Unembiggen</button>
     <div id="canvasArea">
         <canvas id="original" width="48px" height="48px" class="canvasBackground"> </canvas>
@@ -925,22 +925,57 @@
             const writableStream = await handle.createWritable();
             await writableStream.write(blob);
             await writableStream.close();
-
-            //downloadPng("main.png", png);
         }
 
-        /*
-        function downloadPng(name, png) {
-            const uint8Array = new Uint8Array(png);
-            const base64String = uint8Array.toBase64();
+        function replaceLast(str, find, replace) {
+            const lastIndex = str.lastIndexOf(find); // Find the index of the last occurrence.
 
-            var hiddenElement = document.createElement("a");
-            hiddenElement.href = "data:image/png;base64," + base64String;
-            hiddenElement.target = "_blank";
-            hiddenElement.download = name;
-            hiddenElement.click();
+            // If the substring is not found, return the original string.
+            if (lastIndex === -1) {
+                return str;
+            }
+
+            // Slice the string into two parts and insert the replacement in between.
+            const partBefore = str.slice(0, lastIndex);
+            const partAfter = str.slice(lastIndex + find.length);
+
+            return partBefore + replace + partAfter;
         }
-        */
+
+        document.getElementById("saveBW").onclick = saveBW;
+
+        async function saveBW() {
+            const canvas = document.getElementById("bw");
+            const ctx = canvas.getContext("2d");
+            const pixelData = ctx.getImageData(0, 0, width, height).data.buffer;
+
+            const mimeType = "image/png";
+            const promise = window.showSaveFilePicker({
+                startIn: "downloads",
+                suggestedName: replaceLast(fileName, ".", "_BW.") || "bw.png", // Suggest a default file name
+                types: [
+                    {
+                        description: 'PNG',
+                        accept: {
+                            [mimeType]: ['.png'], // Specify acceptable file extensions
+                        },
+                    },
+                ],
+            });
+
+            const png = UPNG.encode(
+                [pixelData], // frames
+                width,
+                height,
+                3, // number of colours
+            );
+
+            const blob = new Blob([png], { type: mimeType });
+            const handle = await promise;
+            const writableStream = await handle.createWritable();
+            await writableStream.write(blob);
+            await writableStream.close();
+        }
 
         let file;
         let fileName;
