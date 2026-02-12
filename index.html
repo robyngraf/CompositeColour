@@ -865,7 +865,7 @@
             isBig = !isBig;
             const canvases = document.querySelectorAll('.canvasBackground');
             for (const canvas of canvases) {
-                canvas.style.zoom = isBig ? 4 : 1;
+                canvas.style.zoom = isBig ? 6 : 1;
             }
             document.getElementById("changeSize").innerText = isBig ? "Unembiggen" : "Reëmbiggen";
         }
