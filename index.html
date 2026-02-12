@@ -359,6 +359,10 @@
             }
         }
 
+        function isNumber(value) {
+            return Number.isFinite(value);
+        }
+
         let currentGradient = null;
 
         function changeCurrentColour(colourIndex, gIndex) {
@@ -379,7 +383,7 @@
             const buttons3 = document.getElementById("buttonRow3").children;
             const buttons4 = document.getElementById("buttonRow4").children;
             for (const thisButton of [...buttons, ...buttons2, ...buttons3, ...buttons4]) {
-                if (currentGradient !== null && thisButton.getAttribute("g") == currentGradient) {
+                if (isNumber(currentGradient) && thisButton.getAttribute("g") == currentGradient) {
                     thisButton.classList.add("gradient");
                 } else {
                     thisButton.classList.remove("gradient");
@@ -820,7 +824,7 @@
             const imgData = ctx.getImageData(0, 0, width, height);
 
             let colourSet = uniqueColours;
-            if (currentGradient != null) {
+            if (isNumber(currentGradient)) {
                 if (currentGradient == -1) {
                     colourSet = customGradient;
                 } else {
