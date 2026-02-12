@@ -14,6 +14,9 @@
         #buttonRow3 {
             width: 140px;
         }
+        #buttonRow2, #buttonRow4 {
+            height: 20px;
+        }
 
         #currentColourBox {
             display: flex;
@@ -358,9 +361,9 @@
 
         let currentGradient = null;
 
-        function changeCurrentColour(colourIndex) {
-            currentColour = referenceColours[colourIndex];
-            gradientIndex = null;
+        function changeCurrentColour(colourIndex, gIndex) {
+            if (colourIndex !== null) currentColour = referenceColours[colourIndex];
+            currentGradient = gIndex;
 
             generateNeighbours();
 
@@ -376,12 +379,12 @@
             const buttons3 = document.getElementById("buttonRow3").children;
             const buttons4 = document.getElementById("buttonRow4").children;
             for (const thisButton of [...buttons, ...buttons2, ...buttons3, ...buttons4]) {
-                if (gradientIndex !== null && thisButton.getAttribute("g") == gradientIndex) {
+                if (currentGradient !== null && thisButton.getAttribute("g") == currentGradient) {
                     thisButton.classList.add("gradient");
                 } else {
                     thisButton.classList.remove("gradient");
                 }
-                if (thisButton.getAttribute("i") == colourIndex) {
+                if (thisButton.getAttribute("i") == currentColour.index) {
                     thisButton.classList.add("selected");
                 } else {
                     thisButton.classList.remove("selected");
@@ -392,9 +395,8 @@
         function onColourButtonClick(event) {
             const button = event.target;
             const i = parseInt(button.getAttribute("i"));
-            changeCurrentColour(i);
-            const gradientIndex = button.getAttribute("g");
-            currentGradient = gradientIndex;
+            const g = button.getAttribute("g");
+            changeCurrentColour(i, g);
         }
 
         let customGradient;
@@ -436,6 +438,7 @@
                 createButton(row, colour, false, -1);
             }
             customGradient = gradient;
+            changeCurrentColour(null, -1);
         }
 
         function findColour(c) {
