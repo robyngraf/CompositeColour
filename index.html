@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
 
-    <title>Artifact Colors Editor</title>
+    <title>Shittifier</title>
     <style>
         .buttonRow {
             width: 160px;
@@ -961,10 +961,23 @@
                     const image = new Image();
                     image.src = svgUrl;
                     await image.decode();
-                    otherImage = await createImageBitmap(image, { resizeHeight: height});
+                    let resize = null;
+                    if ((image.height > 672 && image.width * 672 / image.height <= 420) || image.height * 420 / image.width > 672) {
+                        resize = { resizeHeight: 672 };
+                    } else if (image.width > 420 || image.width * 672 / image.height > 420) {
+                        resize = { resizeWidth: 420 };
+                    }
+                    otherImage = await createImageBitmap(image, resize);
                     URL.revokeObjectURL(svgUrl);
                 } else {
                     otherImage = await createImageBitmap(file);
+                    let resize = null;
+                    if ((otherImage.height > 672 && otherImage.width * 672 / otherImage.height <= 420) || image.height * 420 / image.width > 672) {
+                        resize = { resizeHeight: 672 };
+                    } else if (otherImage.width > 420 || otherImage.width * 672 / otherImage.height > 420) {
+                        resize = { resizeWidth: 420 };
+                    }
+                    if (resize) otherImage = await createImageBitmap(image, resize);
                 }
                 width = otherImage.width;
                 height = otherImage.height;
