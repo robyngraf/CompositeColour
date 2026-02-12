@@ -109,6 +109,7 @@
     <button id="reload" type="button">Reprocess</button>
     <button id="save" type="button">Save Master</button>
     <button id="saveBW" type="button" style="display: none;">Save BW</button>
+    <button id="changeSize" type="button">Unembiggen</button>
     <div>
         <canvas id="original" width="48px" height="48px" class="canvasBackground"> </canvas>
         <canvas id="colour" width="48px" height="48px" class="canvasBackground"> </canvas>
@@ -854,6 +855,15 @@
         }
 
         document.getElementById("reload").onclick = processImage;
+        
+        document.getElementById("changeSize").onclick = changeSize;
+
+        function changeSize() {
+            const canvases = document.querySelectorAll('.canvasBackground');
+            for (const canvas of canvases) {
+                canvas.style.zoom = 1;
+            }
+        }
 
         document.getElementById("save").onclick = save;
 
