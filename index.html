@@ -99,6 +99,20 @@
         label {
             display: inline-block;
         }
+
+        #tools {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+        #tools > div {
+            margin: 10px;
+        }
+
+        #tools > div:not(#buttonRow3) {
+            width: min-content;
+        }
     </style>
 </head>
 
@@ -107,7 +121,7 @@
         File load/save functionality won't work unless you save this HTML file to your computer. Also might not work in FireFox.
     </p>
     <input type="file" id="fileInput" accept="image/*">
-    <button id="reload" type="button">Reprocess</button>
+    <button id="reload" type="button" disabled>Reprocess</button>
     <button id="save" type="button">Save Master</button>
     <button id="saveBW" type="button">Save BW</button>
     <button id="changeSize" type="button">Unembiggen</button>
@@ -118,30 +132,39 @@
         <canvas id="artifact" width="48px" height="48px" style="display: none;" class="canvasBackground"> </canvas>
         <canvas id="blur" width="48px" height="48px" class="canvasBackground"> </canvas>
     </div>
-    <div id="buttonRow" class="buttonRow"> </div>
-    <div id="currentColourBox">
-        <div id="currentColour"> </div>
-    </div>
-    <div style="width:160px">
-        <label for="radius">Brush Size:</label>
-        <input type="range" id="radius" name="radius" min="0" max="49" value="2" style="width:55px">
-        <span id="radius-value">3</span>
-    </div>
-    Colours with minimal glitching when next to current colour:
-    <div id="buttonRow4" class="buttonRow">
-    </div><br>
-    <button id="generateGradient" type="button">Generate Gradient</button>
-    <div id="buttonRow2" class="buttonRow">
-    </div>
-    <div style="width:160px">
-        <label for="draw"><input type="radio" id="draw" name="tool" value="draw" checked>&nbsp;Draw</label>
-        <label for="drawBehind"><input type="radio" id="drawBehind" name="tool" value="drawBehind">&nbsp;Draw Behind</label>
-        <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
-        <label for="eraseColour"><input type="radio" id="eraseColour" name="tool" value="eraseColour">&nbsp;Erase Colour</label>
-        <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool" value="fill">&nbsp;Fill</label>
-        <label for="pickColour"><input type="radio" id="pickColour" name="tool" value="pickColour">&nbsp;Pick Colour</label>
-    </div>
-    <div id="buttonRow3" class="buttonRow">
+    <div id="tools">
+        <div>
+            <div id="buttonRow" class="buttonRow"> </div>
+            <div id="currentColourBox">
+                <div id="currentColour"> </div>
+            </div>
+            <div style="width:160px">
+                <label for="radius">Brush Size:</label>
+                <input type="range" id="radius" name="radius" min="0" max="49" value="2" style="width:55px">
+                <span id="radius-value">3</span>
+            </div>
+        </div>
+        <div>
+            Colours with minimal glitching when next to current colour:
+            <div id="buttonRow4" class="buttonRow">
+            </div>
+        </div>
+        <div>
+            <button id="generateGradient" type="button">Generate Gradient</button>
+            <div id="buttonRow2" class="buttonRow">
+            </div>
+        </div>
+        <div style="width:160px">
+            <label for="draw"><input type="radio" id="draw" name="tool" value="draw" checked>&nbsp;Draw</label>
+            <label for="drawBehind"><input type="radio" id="drawBehind" name="tool" value="drawBehind">&nbsp;Draw Behind</label>
+            <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
+            <label for="eraseColour"><input type="radio" id="eraseColour" name="tool" value="eraseColour">&nbsp;Erase
+                Colour</label>
+            <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool" value="fill">&nbsp;Fill</label>
+            <label for="pickColour"><input type="radio" id="pickColour" name="tool" value="pickColour">&nbsp;Pick Colour</label>
+        </div>
+        <div id="buttonRow3" class="buttonRow">
+        </div>
     </div>
     
     <script>
@@ -311,6 +334,7 @@
             if (gradientIndex != null) button.setAttribute("g", gradientIndex);
             const background = `#${hex(colour.colour[0])}${hex(colour.colour[1])}${hex(colour.colour[2])}`;
             button.style.background = background;
+            if (colour.l < 50) button.style.color = "white";
             if (isDuplicate) {
                 button.classList.add("duplicate");
             }
@@ -822,6 +846,7 @@
         }
 
         function processImage() {
+            if (!img) return;
             const ctx = img.getContext("2d", { willReadFrequently: true });
             const imgData = ctx.getImageData(0, 0, width, height);
 
@@ -1079,6 +1104,8 @@
             const originalCtx = originalCanvas.getContext("2d", { willReadFrequently: true });
             originalCtx.reset();
             originalCtx.drawImage(img, 0, 0, width, height);
+
+            document.getElementById("reload").removeAttribute("disabled");
         }
 
         function pngUsesCorrectPalette(upng) {
