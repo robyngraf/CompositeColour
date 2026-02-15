@@ -1042,28 +1042,28 @@
                 width = upng.width;
                 height = upng.height;
             } else {
-                if (file.type = 'image/svg+xml') {
+                function chooseResize(width, height) {
+                    if (width <= 420 && height <= 672) return null;
+                    const ratio = width * 672 / 420 / height;
+                    if (ratio >= 1) {
+                        return { resizeWidth: 420 };
+                    } else {
+                        return { resizeHeight: 672 };
+                    }
+                }
+
+                if (file.type == 'image/svg+xml') {
                     const svgUrl = URL.createObjectURL(file);
                     const image = new Image();
                     image.src = svgUrl;
                     await image.decode();
-                    let resize = null;
-                    if ((image.height > 672 && image.width * 672 / image.height <= 420) || image.height * 420 / image.width > 672) {
-                        resize = { resizeHeight: 672 };
-                    } else if (image.width > 420 || image.width * 672 / image.height > 420) {
-                        resize = { resizeWidth: 420 };
-                    }
+                    let resize = chooseResize(image.width, image.height);
                     otherImage = await createImageBitmap(image, resize);
                     URL.revokeObjectURL(svgUrl);
                 } else {
                     otherImage = await createImageBitmap(file);
-                    let resize = null;
-                    if ((otherImage.height > 672 && otherImage.width * 672 / otherImage.height <= 420) || image.height * 420 / image.width > 672) {
-                        resize = { resizeHeight: 672 };
-                    } else if (otherImage.width > 420 || otherImage.width * 672 / otherImage.height > 420) {
-                        resize = { resizeWidth: 420 };
-                    }
-                    if (resize) otherImage = await createImageBitmap(image, resize);
+                    let resize = chooseResize(otherImage.width, otherImage.height);
+                    if (resize) otherImage = await createImageBitmap(otherImage, resize);
                 }
                 width = otherImage.width;
                 height = otherImage.height;
