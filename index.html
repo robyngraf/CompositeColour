@@ -206,6 +206,7 @@
             <button id="borderBlack" type="button">Black Border</button>
             <button id="borderContrast" type="button">Contrasting Border</button>
             <button id="borderMatch" type="button">Matching Border</button>
+            <button id="borderHypno" type="button">Hypno Border</button>
         </div>
     </div>
     
@@ -277,14 +278,27 @@
             renderArtifactColors();
         }
 
-        document.getElementById("borderMatch").onclick = () => drawResponsiveBorder(true);
-        document.getElementById("borderContrast").onclick = () => drawResponsiveBorder(false);
+        document.getElementById("borderMatch").onclick = () => drawResponsiveBorder(false);
+        document.getElementById("borderContrast").onclick = () => drawResponsiveBorder(true);
+        document.getElementById("borderHypno").onclick = () => {
+            for (let i = 0; i < 3; i++) {
+                drawResponsiveBorder(false);
+                drawResponsiveBorder(false);
+                drawResponsiveBorder(false);
+                drawResponsiveBorder(true);
+            }
+        };
 
+        let borderSquare = false;
         function drawResponsiveBorder(isInverted) {
             const newColourBuffer = structuredClone(colourBuffer);
             const newAlphaBuffer = structuredClone(alphaBuffer);
 
-            const points = [[-1, 0], [1, 0], [0, 1], [0, -1]];
+            if (isInverted) borderSquare = false;
+            const points = borderSquare
+                ? [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, -1], [1, -1], [-1, 1], [1, -1]]
+                : [[-1, 0], [1, 0], [0, 1], [0, -1]];
+            if(!isInverted) borderSquare = !borderSquare;
 
             for (let y = 0; y < height; y++) {
                 const row = newColourBuffer[y];
@@ -307,7 +321,7 @@
                     }
                     
                     if (isEdge) {
-                        const colour = lightnessTally > 0 ^ isInverted ? 0 : 63;
+                        const colour = lightnessTally > 0 ^ isInverted ? 63 : 0;
                         alphaRow[x] = 1;
                         row[x] = colour;
                     }
