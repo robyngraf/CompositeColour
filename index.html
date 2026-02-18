@@ -439,7 +439,7 @@
         function onColourButtonClick(event) {
             const button = event.target;
             const i = parseInt(button.getAttribute("i"));
-            const g = button.getAttribute("g");
+            const g = parseInt(button.getAttribute("g"));
             changeCurrentColour(i, g);
         }
 
