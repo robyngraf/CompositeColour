@@ -1156,19 +1156,28 @@
             const aColour = a.colour;
             const bColour = b.colour;
             const diff = [
-                (aColour[0] - bColour[0]) * 1,
-                (aColour[1] - bColour[1]) * 1,
-                (aColour[2] - bColour[2]) * 1
+                (aColour[0] - bColour[0]),
+                (aColour[1] - bColour[1]),
+                (aColour[2] - bColour[2])
             ];
             if (isHueMatch) {
+                function sFactor(s) {
+                    if (s < 20) return easeInOutCubic(s / 20);
+                    return 1;
+                }
+
                 diff.push(
                     a.l - b.l * 2.55,
                     (a.s - b.s) * 2.55,
-                    hueDiff(a, b) * Math.max(0, a.s - 10) * Math.max(0, b.s - 10) / 1765
+                    hueDiff(a, b) * sFactor(a.s) * sFactor(b.s) * 255 / 180
                 );
             }
             const dist = diff.reduce((a, v) => a + v * v, 0);
             return dist;
+        }
+        
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
         }
 
         setCanvasHandlers("original");
