@@ -122,6 +122,7 @@
     </p>
     <input type="file" id="fileInput" accept="image/*">
     <button id="reload" type="button" disabled>Reprocess</button>
+    <label for="hueMatch" title="Match Hue applies when loading or reprocessing images. May cause banding on gradients but makes colour choices less outlandish"><input type="checkbox" id="hueMatch">&nbsp;Match hue</label>
     <button id="save" type="button">Save Master</button>
     <button id="saveBW" type="button">Save BW</button>
     <button id="changeSize" type="button">Unembiggen</button>
@@ -172,6 +173,14 @@
         let height = 48;
 
         document.getElementById("fileInput").addEventListener("change", handleFile);
+        
+        document.getElementById("hueMatch").onclick = onHueMatchClick;
+
+        let isHueMatch;
+        function onHueMatchClick() {
+            isHueMatch = document.getElementById("hueMatch").checked;
+        }
+        onHueMatchClick();
 
         const primaryFrac = 1;
         const secondaryFrac = 1;
@@ -227,8 +236,7 @@
             for (const colour of allColours) {
                 let isUnique = true;
                 for (const uniqueColour of uniqueColours) {
-                    const diff = diffBetweenColours(colour, uniqueColour);
-                    if (diff < 3) {
+                    if (coloursAreEqual(colour, uniqueColour)) {
                         isUnique = false;
                         duplicateColours.push(colour);
                         break;
@@ -236,6 +244,12 @@
                 }
                 if (isUnique) uniqueColours.push(colour);
             }
+        }
+
+        function coloursAreEqual(a, b) {
+            const ac = a.colour;
+            const bc = b.colour;
+            return ac[0] == bc[0] && ac[1] == bc[1] && ac[2] == bc[2];
         }
 
         function hAdjust(h) {
@@ -1144,11 +1158,15 @@
             const diff = [
                 (aColour[0] - bColour[0]) * 1,
                 (aColour[1] - bColour[1]) * 1,
-                (aColour[2] - bColour[2]) * 1,
-                a.l - b.l,
-                (a.s - b.s) * 2,
-                hueDiff(a, b) * Math.max(0, a.s - 10) * Math.max(0, b.s - 10) / 9000
+                (aColour[2] - bColour[2]) * 1
             ];
+            if (isHueMatch) {
+                diff.push(
+                    a.l - b.l * 2.55,
+                    (a.s - b.s) * 2.55,
+                    hueDiff(a, b) * Math.max(0, a.s - 10) * Math.max(0, b.s - 10) / 1765
+                );
+            }
             const dist = diff.reduce((a, v) => a + v * v, 0);
             return dist;
         }
