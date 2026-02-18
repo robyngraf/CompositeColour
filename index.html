@@ -282,23 +282,20 @@
         document.getElementById("borderContrast").onclick = () => drawResponsiveBorder(true);
         document.getElementById("borderHypno").onclick = () => {
             for (let i = 0; i < 3; i++) {
+                drawResponsiveBorder(false, true);
                 drawResponsiveBorder(false);
-                drawResponsiveBorder(false);
-                drawResponsiveBorder(false);
+                drawResponsiveBorder(false, true);
                 drawResponsiveBorder(true);
             }
         };
 
-        let borderSquare = false;
-        function drawResponsiveBorder(isInverted) {
+        function drawResponsiveBorder(isInverted, borderSquare) {
             const newColourBuffer = structuredClone(colourBuffer);
             const newAlphaBuffer = structuredClone(alphaBuffer);
 
-            if (isInverted) borderSquare = false;
             const points = borderSquare
-                ? [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, -1], [1, -1], [-1, 1], [1, -1]]
+                ? [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, -1], [1, -1], [-1, 1], [1, 1]]
                 : [[-1, 0], [1, 0], [0, 1], [0, -1]];
-            if(!isInverted) borderSquare = !borderSquare;
 
             for (let y = 0; y < height; y++) {
                 const row = newColourBuffer[y];
