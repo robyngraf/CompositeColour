@@ -113,6 +113,21 @@
         #tools > div:not(#buttonRow3) {
             width: min-content;
         }
+
+        #topControls {
+            display: flex;
+        }
+        #topControls > div {
+            display: flex;
+            flex-direction: column;
+            width: fit-content;
+            margin: 10px;
+        }
+
+        #canvasArea label {
+            flex-direction: column;
+            display: inline-flex;
+        }
     </style>
 </head>
 
@@ -121,17 +136,37 @@
         File load/save functionality won't work unless you save this HTML file to your computer. Also might not work in FireFox.
     </p>
     <input type="file" id="fileInput" accept="image/*">
-    <button id="reload" type="button" disabled>Reprocess</button>
-    <label for="hueMatch" title="Match Hue applies when loading or reprocessing images. May cause banding on gradients but makes colour choices less outlandish"><input type="checkbox" id="hueMatch">&nbsp;Match hue</label>
-    <button id="save" type="button">Save Master</button>
-    <button id="saveBW" type="button">Save BW</button>
-    <button id="changeSize" type="button">Unembiggen</button>
+    <div id="topControls">
+        <div id="matches">
+            <label for="colourMatch"><input type="checkbox" id="colourMatch" checked>&nbsp;Match RGB</label>
+            <label for="hueMatch"><input type="checkbox" id="hueMatch" checked>&nbsp;Match hue</label>
+            <label for="saturationMatch"><input type="checkbox" id="saturationMatch">&nbsp;Match saturation</label>
+            <label for="lightnessMatch"><input type="checkbox" id="lightnessMatch">&nbsp;Match lightness</label>
+            <button id="reload" type="button" disabled>Reprocess</button>
+        </div>
+        <div>
+            <button id="save" type="button">Save Master</button>
+            <button id="saveBW" type="button">Save Monochrome</button>
+        </div>
+        <button id="changeSize" type="button">Unembiggen</button>
+    </div>
+    
     <div id="canvasArea">
-        <canvas id="original" width="48px" height="48px" class="canvasBackground"> </canvas>
-        <canvas id="colour" width="48px" height="48px" class="canvasBackground"> </canvas>
-        <div class="canvasBackground"><canvas id="bw" width="48px" height="48px" class="green"> </canvas></div>
-        <canvas id="artifact" width="48px" height="48px" style="display: none;" class="canvasBackground"> </canvas>
-        <canvas id="blur" width="48px" height="48px" class="canvasBackground"> </canvas>
+        <label for="original">Original
+            <canvas id="original" width="48px" height="48px" class="canvasBackground"> </canvas>
+        </label>
+        <label for="colour">Master
+            <canvas id="colour" width="48px" height="48px" class="canvasBackground"> </canvas>
+        </label>
+        <label for="bw">Mono
+            <div class="canvasBackground"><canvas id="bw" width="48px" height="48px" class="green"> </canvas></div>
+        </label>
+        <label for="artifact" style="display: none;">Artifact Colour Technical
+            <canvas id="artifact" width="48px" height="48px" class="canvasBackground"> </canvas>
+        </label>
+        <label for="blur">Preview
+            <canvas id="blur" width="48px" height="48px" class="canvasBackground"> </canvas>
+        </label>
     </div>
     <div id="tools">
         <div>
@@ -174,11 +209,20 @@
 
         document.getElementById("fileInput").addEventListener("change", handleFile);
         
+        document.getElementById("colourMatch").onclick = onHueMatchClick;
         document.getElementById("hueMatch").onclick = onHueMatchClick;
+        document.getElementById("saturationMatch").onclick = onHueMatchClick;
+        document.getElementById("lightnessMatch").onclick = onHueMatchClick;
 
+        let isColourMatch;
         let isHueMatch;
+        let isSaturationMatch;
+        let isLightnessMatch;
         function onHueMatchClick() {
+            isColourMatch = document.getElementById("colourMatch").checked;
             isHueMatch = document.getElementById("hueMatch").checked;
+            isSaturationMatch = document.getElementById("saturationMatch").checked;
+            isLightnessMatch = document.getElementById("lightnessMatch").checked;
         }
         onHueMatchClick();
 
@@ -1155,11 +1199,14 @@
         function diffBetweenColours(a, b) {
             const aColour = a.colour;
             const bColour = b.colour;
-            const diff = [
-                (aColour[0] - bColour[0]),
-                (aColour[1] - bColour[1]),
-                (aColour[2] - bColour[2])
-            ];
+            const diff = [];
+            if (isColourMatch) {
+                diff.push(
+                    (aColour[0] - bColour[0]),
+                    (aColour[1] - bColour[1]),
+                    (aColour[2] - bColour[2])
+                );
+            }
             if (isHueMatch) {
                 function sFactor(s) {
                     if (s < 20) return easeInOutCubic(s / 20);
@@ -1167,10 +1214,14 @@
                 }
 
                 diff.push(
-                    a.l - b.l * 2.55,
-                    (a.s - b.s) * 2.55,
                     hueDiff(a, b) * sFactor(a.s) * sFactor(b.s) * 255 / 180
                 );
+            }
+            if (isSaturationMatch) {
+                diff.push((a.s - b.s) * 2.55);
+            }
+            if (isLightnessMatch) {
+                diff.push((a.l - b.l) * 2.55);
             }
             const dist = diff.reduce((a, v) => a + v * v, 0);
             return dist;
