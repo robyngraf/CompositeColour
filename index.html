@@ -133,7 +133,7 @@
 
 <body>
     <p>
-        File load/save functionality won't work unless you save this HTML file to your computer. Also might not work in FireFox.
+        File load/save functionality won't work unless you save this HTML file to your computer. Also might only work in Chrome or Edge.
     </p>
     <input type="file" id="fileInput" accept="image/*">
     <div id="topControls">
@@ -729,7 +729,7 @@
                     const r = data[idx];
                     const g = data[idx + 1];
                     const b = data[idx + 2];
-                    const c = rgbToNearestPaletteColour(r, g, b, uniqueColours);
+                    const c = rgbToNearestPaletteColour(r, g, b, uniqueColours, true);
                     changeCurrentColour(c);
                 }
             } else {
@@ -930,7 +930,7 @@
             return { colour: [r, g, b], h: hsl.h, s: hsl.s, l: hsl.l };
         }
 
-        function rgbToNearestPaletteColour(r, g, b, palette) {
+        function rgbToNearestPaletteColour(r, g, b, palette, override) {
             // NB this assumes that black and white are always in the palette
             if (Math.max(r, g, b) < 32) {
                 return 0; // black
@@ -941,7 +941,7 @@
                 let result = 0;
                 let maxDist = Number.MAX_SAFE_INTEGER;
                 for (const referenceColour of palette) {
-                    const dist = diffBetweenColours(c, referenceColour);
+                    const dist = diffBetweenColours(c, referenceColour, override);
 
                     if (dist < maxDist) {
                         maxDist = dist;
@@ -1245,18 +1245,18 @@
             return true;
         }
 
-        function diffBetweenColours(a, b) {
+        function diffBetweenColours(a, b, override) {
             const aColour = a.colour;
             const bColour = b.colour;
             const diff = [];
-            if (isColourMatch) {
+            if (isColourMatch || override) {
                 diff.push(
                     (aColour[0] - bColour[0]),
                     (aColour[1] - bColour[1]),
                     (aColour[2] - bColour[2])
                 );
             }
-            if (isHueMatch) {
+            if (isHueMatch && !override) {
                 function sFactor(s) {
                     if (s < 20) return easeInOutCubic(s / 20);
                     return 1;
@@ -1266,10 +1266,10 @@
                     hueDiff(a, b) * sFactor(a.s) * sFactor(b.s) * 255 / 180
                 );
             }
-            if (isSaturationMatch) {
+            if (isSaturationMatch && !override) {
                 diff.push((a.s - b.s) * 2.55);
             }
-            if (isLightnessMatch) {
+            if (isLightnessMatch && !override) {
                 diff.push((a.l - b.l) * 2.55);
             }
             const dist = diff.reduce((a, v) => a + v * v, 0);
