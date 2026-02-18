@@ -201,6 +201,10 @@
         </div>
         <div id="buttonRow3" class="buttonRow">
         </div>
+        <div>
+            <button id="borderWhite" type="button">White Border</button>
+            <button id="borderBlack" type="button">Black Border</button>
+        </div>
     </div>
     
     <script>
@@ -225,6 +229,51 @@
             isLightnessMatch = document.getElementById("lightnessMatch").checked;
         }
         onHueMatchClick();
+
+        document.getElementById("borderWhite").onclick = () => drawBorder(true);
+        document.getElementById("borderBlack").onclick = () => drawBorder(false);
+
+        function drawBorder(isWhite) {
+            const colour = isWhite ? 63 : 0;
+            const newColourBuffer = structuredClone(colourBuffer);
+            const newAlphaBuffer = structuredClone(alphaBuffer);
+
+            const points = [[-1, 0], [1, 0], [0, 1], [0, -1]];
+
+            for (let y = 0; y < height; y++) {
+                const row = newColourBuffer[y];
+                const alphaRow = newAlphaBuffer[y];
+                for (let x = 0; x < width; x++) {
+                    if (alphaRow[x]) continue;
+                    let isEdge = false;
+                    
+                    for (const [x1, y1] of points) {
+                        const x2 = x1 + x;
+                        const y2 = y1 + y;
+                        if (x2 < 0) continue;
+                        if (y2 < 0) continue;
+                        if (x2 >= width) continue;
+                        if (y2 >= height) continue;
+                        if (alphaBuffer[y2][x2]) {
+                            isEdge = true;
+                            break;
+                        }
+                    }
+
+                    if (isEdge) {
+                        alphaRow[x] = 1;
+                        row[x] = colour;
+                    }
+                }
+            }
+            alphaBuffer = newAlphaBuffer;
+            colourBuffer = newColourBuffer;
+            
+            renderColour();
+            renderToMonoBuffer();
+            renderBw();
+            renderArtifactColors();
+        }
 
         const primaryFrac = 1;
         const secondaryFrac = 1;
