@@ -214,6 +214,8 @@
         let width = 48;
         let height = 48;
 
+        let img;
+
         document.getElementById("fileInput").addEventListener("change", handleFile);
         
         document.getElementById("colourMatch").onclick = onHueMatchClick;
@@ -230,6 +232,19 @@
             isHueMatch = document.getElementById("hueMatch").checked;
             isSaturationMatch = document.getElementById("saturationMatch").checked;
             isLightnessMatch = document.getElementById("lightnessMatch").checked;
+
+            const isValid = isColourMatch || isHueMatch || isSaturationMatch || isLightnessMatch;
+            const isValidAndHasFile = isValid && img;
+            if (isValid) {
+                document.getElementById("fileInput").removeAttribute("disabled");
+            } else {
+                document.getElementById("fileInput").setAttribute("disabled", true);
+            }
+            if (isValidAndHasFile) {
+                document.getElementById("reload").removeAttribute("disabled");
+            } else {
+                document.getElementById("reload").setAttribute("disabled", true);
+            }
         }
         onHueMatchClick();
 
@@ -662,8 +677,7 @@
                 currentIndex--;
 
                 // And swap it with the current element.
-                [array[currentIndex], array[randomIndex]] = [
-                    array[randomIndex], array[currentIndex]];
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
             }
         }
 
@@ -955,7 +969,6 @@
         let colourBuffer = createMatrix(height, width);
         let monoBuffer = createMatrix(height, width);
         let alphaBuffer = createMatrix(height, width);
-        let img;
 
         function renderToMonoBuffer() {
             // Convert to monochrome buffer
@@ -1512,7 +1525,7 @@
                     g += data1[idx2 + 1];
                     b += data1[idx2 + 2];
                     a += data1[idx2 + 3];
-                    
+
                     // row below
                     const idx3 = (yPlus1Offset + x) * 4;
                     r += data1[idx3];
