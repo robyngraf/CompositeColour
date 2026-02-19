@@ -543,22 +543,30 @@
         function generateNeighbours() {
             var row = document.getElementById("buttonRow4");
             row.innerHTML = "";
-            let colours = [];
-            let bits = ["r", "g", "b", "c", "m", "y"];
-
-            for (const bit of bits) {
-                const c = structuredClone(currentColour);
-                c[bit] = 1 - c[bit];
-                colours.push(findColour(c));
-            }
+            let colours = [
+                ...allRelatedColours(currentColour, false),
+                ...allRelatedColours(currentColour, true)
+            ];
             colours.sort((a, b) =>
                 (a.s == 0 ? 1 : 0) - (b.s == 0 ? 1 : 0)
                 || (hAdjust(a.h) - hAdjust(b.h))
                 || (a.l - b.l));
-
             for (const colour of colours) {
                 createButton(row, colour, false);
             }
+        }
+
+        function allRelatedColours(colour, findLighterColours) {
+            let colours = [];
+            let bits = ["r", "g", "b", "c", "m", "y"];
+            for (const bit of bits) {
+                const c = structuredClone(colour);
+                if (!!c[bit] == findLighterColours) continue;
+                c[bit] = findLighterColours ? 1 : 0;
+                colours.push(findColour(c));
+                colours.push(...allRelatedColours(c, findLighterColours));
+            }
+            return [...new Set(colours)];
         }
 
         function isNumber(value) {
