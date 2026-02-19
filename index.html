@@ -43,7 +43,10 @@
         .colourButton {
             width: 20px;
             height: 20px;
-            padding: 0;
+            font-size: 15px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .duplicate {
@@ -57,8 +60,18 @@
         }
 
         .selected::after {
-            content: "*";
+            content: "🗸";
             position: absolute;
+        }
+
+        body:has(.selected) .colourButton:not(.neighbour) {
+            position: relative;
+        }
+
+        body:has(.selected) .colourButton:not(.neighbour, .selected)::after {
+            content: "🛇";
+            position: absolute;
+            opacity: 50%;
         }
 
         .gradient {
@@ -168,6 +181,8 @@
             <canvas id="blur" width="48px" height="48px" class="canvasBackground"> </canvas>
         </label>
     </div>
+    🗸 is current colour. <br>
+    🛇 will glitch if next to current colour
     <div id="tools">
         <div>
             <div id="buttonRow" class="buttonRow"> </div>
@@ -178,11 +193,6 @@
                 <label for="radius">Brush Size:</label>
                 <input type="range" id="radius" name="radius" min="0" max="49" value="2" style="width:55px">
                 <span id="radius-value">3</span>
-            </div>
-        </div>
-        <div>
-            Colours with minimal glitching when next to current colour:
-            <div id="buttonRow4" class="buttonRow">
             </div>
         </div>
         <div>
@@ -540,20 +550,11 @@
 
         document.getElementById("generateGradient").onclick = onGenerateGradientClick;
 
-        function generateNeighbours() {
-            var row = document.getElementById("buttonRow4");
-            row.innerHTML = "";
-            let colours = [
+        function getNeighbours() {
+            return [
                 ...allRelatedColours(currentColour, false),
                 ...allRelatedColours(currentColour, true)
             ];
-            colours.sort((a, b) =>
-                (a.s == 0 ? 1 : 0) - (b.s == 0 ? 1 : 0)
-                || (hAdjust(a.h) - hAdjust(b.h))
-                || (a.l - b.l));
-            for (const colour of colours) {
-                createButton(row, colour, false);
-            }
         }
 
         function allRelatedColours(colour, findLighterColours) {
@@ -579,7 +580,7 @@
             if (colourIndex !== null) currentColour = referenceColours[colourIndex];
             currentGradient = gIndex;
 
-            generateNeighbours();
+            const neighbours = getNeighbours();
 
             var div = document.getElementById("currentColour");
             const background = `#${hex(currentColour.colour[0])}${hex(currentColour.colour[1])}${hex(currentColour.colour[2])}`;
@@ -591,14 +592,19 @@
             const buttons = document.getElementById("buttonRow").children;
             const buttons2 = document.getElementById("buttonRow2").children;
             const buttons3 = document.getElementById("buttonRow3").children;
-            const buttons4 = document.getElementById("buttonRow4").children;
-            for (const thisButton of [...buttons, ...buttons2, ...buttons3, ...buttons4]) {
+            for (const thisButton of [...buttons, ...buttons2, ...buttons3]) {
+                const buttonColour = referenceColours[parseInt(thisButton.getAttribute("i"))];
+                if (neighbours.includes(buttonColour)) {
+                    thisButton.classList.add("neighbour");
+                } else {
+                    thisButton.classList.remove("neighbour");
+                }
                 if (isNumber(currentGradient) && thisButton.getAttribute("g") == currentGradient) {
                     thisButton.classList.add("gradient");
                 } else {
                     thisButton.classList.remove("gradient");
                 }
-                if (thisButton.getAttribute("i") == currentColour.index) {
+                if (buttonColour.index == currentColour.index) {
                     thisButton.classList.add("selected");
                 } else {
                     thisButton.classList.remove("selected");
