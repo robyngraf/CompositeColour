@@ -912,6 +912,8 @@
                 const b = isErase ? 0 : currentColour.colour[2];
                 const a = isErase ? 0 : 255;
 
+                const isBw = canvas.id == "bw";
+
                 // if len is 0, we draw 1 pixel
                 const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
                 for (let i = 0; i <= len; i++) {
@@ -926,10 +928,18 @@
                             if (x1 < 0 || x1 >= width) continue;
                             const idx = (y1 * width + x1) * 4;
                             if (isDrawBehind && data[idx + 3] > 0) continue;
-                            data[idx] = r;
-                            data[idx + 1] = g;
-                            data[idx + 2] = b;
-                            data[idx + 3] = a;
+                            if (isBw && !isErase) {
+                                const colour = 255 * colourToMono(currentColour, x1, y1);
+                                data[idx] = colour;
+                                data[idx + 1] = colour;
+                                data[idx + 2] = colour;
+                                data[idx + 3] = 255;
+                            } else {
+                                data[idx] = r;
+                                data[idx + 1] = g;
+                                data[idx + 2] = b;
+                                data[idx + 3] = a;
+                            }
                         }
                     }
                 }
@@ -989,6 +999,16 @@
                         monoRow[x] = [colour.r, colour.g, colour.b][phase];
                     }
                 }
+            }
+        }
+
+        function colourToMono(c, x, y) {
+            const phase = x % 3;
+            const rowPhase = y % 2;
+            if (rowPhase) {
+                return [c.c, c.m, c.y][phase];
+            } else {
+                return [c.r, c.g, c.b][phase];
             }
         }
 
