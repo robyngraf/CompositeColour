@@ -333,15 +333,11 @@
             renderArtifactColors();
         }
 
-        const primaryFrac = 1;
-        const secondaryFrac = 1;
 
         function colours() {
             const colours = [];
-            const xPrime = 127.5 * primaryFrac;
-            const xSecondary = 127.5 * secondaryFrac / 2;
-            const xSecondary1 = xSecondary;
-            const xSecondary2 = xSecondary;
+            const xPrime = 127.5;
+            const xSecondary = 127.5 / 2;
             for (let index = 0; index < 64; index++) {
                 const r = index & 1;
                 const g = index >>> 1 & 1;
@@ -351,9 +347,9 @@
                 const y = index >>> 5 & 1;
 
                 const colour = [
-                    Math.floor(Math.min(255, xPrime * r + xSecondary1 * m + xSecondary2 * y)),
-                    Math.floor(Math.min(255, xPrime * g + xSecondary1 * y + xSecondary2 * c)),
-                    Math.floor(Math.min(255, xPrime * b + xSecondary1 * c + xSecondary2 * m))
+                    Math.floor(Math.min(255, xPrime * r + xSecondary * m + xSecondary * y)),
+                    Math.floor(Math.min(255, xPrime * g + xSecondary * y + xSecondary * c)),
+                    Math.floor(Math.min(255, xPrime * b + xSecondary * c + xSecondary * m))
                 ];
                 const hsl = rgbToHsl(colour[0], colour[1], colour[2]);
                 colours.push({
@@ -1445,36 +1441,31 @@
                 for (let x = 0; x < width; x++) {
                     let color = [127, 127, 127];
                     let chromaConfidence = 0;
-                    if (x >= 2 && x + 1 < width && row[x - 2] == row[x + 1]) chromaConfidence++;
-                    if (x >= 1 && x + 2 < width && row[x - 1] == row[x + 2]) chromaConfidence++;
-                    if ((x >= 3 && row[x - 3] == row[x]) || (x + 3 < width && row[x + 3] == row[x])) chromaConfidence += 2;
-                    //if (x + 3 < width && row[x + 3] == row[x]) chromaConfidence++;
+                    const l3 = row[(x - 3 + width) % width];
+                    const l2 = row[(x - 2 + width) % width];
+                    const l1 = row[(x - 1 + width) % width];
+                    const c = row[x];
+                    const r1 = row[(x + 1) % width];
+                    const r2 = row[(x + 2) % width];
+                    const r3 = row[(x + 3) % width];
+                    if (l2 == r1) chromaConfidence++;
+                    if (l1 == r2) chromaConfidence++;
+                    if (l3 == c || r3 == c) chromaConfidence += 2;
                     chromaConfidence *= .25;
-                    //chromaConfidence *= chromaConfidence;
 
+                    const phase = x % 3;
 
-                    if (chromaConfidence > 0) {
-                        const phase = x % 3;
+                    color[phase] = c * 255;
 
-                        color[phase] = row[x] * 255;
+                    const phase2 = (phase + 1) % 3;
+                    if (l2 && r1) color[phase2] = 255;
+                    if (!l2 && !r1) color[phase2] = 0;
 
-                        const phase2 = (phase + 1) % 3;
-                        const l2 = x - 2;
-                        const r2 = x + 1;
-                        if (l2 >= 0 && r2 < width) {
-                            if (row[l2] && row[r2]) color[phase2] = 255;
-                            if (!row[l2] && !row[r2]) color[phase2] = 0;
-                        }
-
-                        const phase3 = (phase + 2) % 3;
-                        const l3 = x - 1;
-                        const r3 = x + 2;
-                        if (l3 >= 0 && r3 < width) {
-                            if (row[l3] && row[r3]) color[phase3] = 255;
-                            if (!row[l3] && !row[r3]) color[phase3] = 0;
-                        }
-                    }
-                    const brightness = (1 - chromaConfidence) * (row[x] * 255);
+                    const phase3 = (phase + 2) % 3;
+                    if (l1 && r2) color[phase3] = 255;
+                    if (!l1 && !r2) color[phase3] = 0;
+                        
+                    const brightness = c * 255 * (1 - chromaConfidence);
                     color = [brightness + color[0] * chromaConfidence, brightness + color[1] * chromaConfidence, brightness + color[2] * chromaConfidence];
 
                     const idx = (y * width + x) * 4;
@@ -1483,7 +1474,7 @@
                         data[idx + 1] = (color[0] + color[2]) * .5;
                         data[idx + 2] = (color[0] + color[1]) * .5;
                     } else {
-                        data[idx] = color[0] * primaryFrac;
+                        data[idx] = color[0];
                         data[idx + 1] = color[1];
                         data[idx + 2] = color[2];
                     }
@@ -1504,47 +1495,35 @@
             const data = imgData.data;
 
             for (let y = 0; y < height; y++) {
+                const yMinus1Offset = ((y + height - 1) % height) * width; // wraps around
+                const yOffset = y * width;
+                const yPlus1Offset = ((y + 1) % height) * width; // wraps around
                 for (let x = 0; x < width; x++) {
-                    const idx = (y * width + x) * 4;
-                    const w2 = (y % 2) ? primaryFrac : secondaryFrac;
-                    const w1 = (y % 2) ? secondaryFrac : primaryFrac;
-                    let r = data1[idx] * w1;
-                    let g = data1[idx + 1] * w1;
-                    let b = data1[idx + 2] * w1;
-                    let a = data1[idx + 3] * w1;
-                    let t = 1 * w1;
+                    // current row
+                    const idx = (yOffset + x) * 4;
+                    let r = data1[idx] * 2;
+                    let g = data1[idx + 1] * 2;
+                    let b = data1[idx + 2] * 2;
+                    let a = data1[idx + 3] * 2;
 
-                    if (y > 0) {
-                        const idx2 = ((y - 1) * width + x) * 4;
-                        r += data1[idx2] * w2 * .5;
-                        g += data1[idx2 + 1] * w2 * .5;
-                        b += data1[idx2 + 2] * w2 * .5;
-                        a += data1[idx2 + 3] * w2 * .5;
-                        t += .5 * w2;
-                    }
-                    if (y + 1 < height) {
-                        const idx3 = ((y + 1) * width + x) * 4;
-                        r += data1[idx3] * w2 * .5;
-                        g += data1[idx3 + 1] * w2 * .5;
-                        b += data1[idx3 + 2] * w2 * .5;
-                        a += data1[idx3 + 3] * w2 * .5;
-                        t += .5 * w2;
-                    }
-                    if (t > 0 && a > 0) {
-                        r = r / t;
-                        g = g / t;
-                        b = b / t;
-                        a = a / t;
-                    } else {
-                        r = 0;
-                        g = 0;
-                        b = 0;
-                        a = 0;
-                    }
-                    data[idx] = r;
-                    data[idx + 1] = g;
-                    data[idx + 2] = b;
-                    data[idx + 3] = a;
+                    // row above
+                    const idx2 = (yMinus1Offset + x) * 4;
+                    r += data1[idx2];
+                    g += data1[idx2 + 1];
+                    b += data1[idx2 + 2];
+                    a += data1[idx2 + 3];
+                    
+                    // row below
+                    const idx3 = (yPlus1Offset + x) * 4;
+                    r += data1[idx3];
+                    g += data1[idx3 + 1];
+                    b += data1[idx3 + 2];
+                    a += data1[idx3 + 3];
+                    
+                    data[idx] = r * .25;
+                    data[idx + 1] = g * .25;
+                    data[idx + 2] = b * .25;
+                    data[idx + 3] = a * .25;
                 }
             }
 
