@@ -912,7 +912,7 @@
                 const b = isErase ? 0 : currentColour.colour[2];
                 const a = isErase ? 0 : 255;
 
-                const isBw = canvas.id == "bw";
+                const isBw = canvas.id == "bw" && !isErase;
 
                 // if len is 0, we draw 1 pixel
                 const len = Math.max(Math.abs(endX - startX), Math.abs(endY - startY)) || 1;
@@ -928,7 +928,7 @@
                             if (x1 < 0 || x1 >= width) continue;
                             const idx = (y1 * width + x1) * 4;
                             if (isDrawBehind && data[idx + 3] > 0) continue;
-                            if (isBw && !isErase) {
+                            if (isBw) {
                                 const colour = 255 * colourToMono(currentColour, x1, y1);
                                 data[idx] = colour;
                                 data[idx + 1] = colour;
