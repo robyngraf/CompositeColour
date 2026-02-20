@@ -550,25 +550,30 @@
 
         document.getElementById("generateGradient").onclick = onGenerateGradientClick;
 
-        function getNeighbours() {
-            return [
-                ...allRelatedColours(currentColour, false),
-                ...allRelatedColours(currentColour, true)
-            ];
+        /**
+         * @param colour - the colour to find compatible colours to
+         */
+        function getCompatibleColoursTo(c) {
+            let bits = ["r", "g", "b", "c", "m", "y"];
+
+            // recursively find compatible colours
+            // lighterOrDarker {number} - 0 for darker, 1 for lighter
+            function a(colour, lighterOrDarker) {
+                let colours = new Set();
+                for (const bit of bits) {
+                    const c = structuredClone(colour);
+                    if (c[bit] == lighterOrDarker) continue;
+                    c[bit] = lighterOrDarker; // make it 1 bit lighter or darker
+                    colours.add(findColour(c));
+                    a(c, lighterOrDarker).forEach(c => colours.add(c));
+                }
+                return colours;
+            }
+
+            // return all darker colours and all lighter colours
+            return [...a(c, 0), ...a(c, 1)];
         }
 
-        function allRelatedColours(colour, findLighterColours) {
-            let colours = [];
-            let bits = ["r", "g", "b", "c", "m", "y"];
-            for (const bit of bits) {
-                const c = structuredClone(colour);
-                if (!!c[bit] == findLighterColours) continue;
-                c[bit] = findLighterColours ? 1 : 0;
-                colours.push(findColour(c));
-                colours.push(...allRelatedColours(c, findLighterColours));
-            }
-            return [...new Set(colours)];
-        }
 
         function isNumber(value) {
             return Number.isFinite(value);
@@ -580,7 +585,7 @@
             if (colourIndex !== null) currentColour = referenceColours[colourIndex];
             currentGradient = gIndex;
 
-            const neighbours = getNeighbours();
+            const neighbours = getCompatibleColoursTo(currentColour);
 
             var div = document.getElementById("currentColour");
             const background = `#${hex(currentColour.colour[0])}${hex(currentColour.colour[1])}${hex(currentColour.colour[2])}`;
