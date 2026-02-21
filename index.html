@@ -64,14 +64,23 @@
             position: absolute;
         }
 
-        body:has(.selected) .colourButton:not(.neighbour) {
+        .glitch {
             position: relative;
         }
 
-        body:has(.selected) .colourButton:not(.neighbour, .selected)::after {
+        .glitch::after {
             content: "🛇";
             position: absolute;
-            opacity: 50%;
+            opacity: 75%;
+        }
+        .glitch1::after {
+            font-size: 6px;
+        }
+        .glitch2::after {
+            font-size: 10px;
+        }
+        .glitch3::after {
+            font-size: 15px;
         }
 
         .gradient {
@@ -196,8 +205,11 @@
             </div>
         </div>
         <div>
-            <button id="generateGradient" type="button">Generate Gradient</button>
+            <button id="generateGradient" type="button">Gradient Including</button>
             <div id="buttonRow2" class="buttonRow">
+            </div>
+            <button id="generateGradient2" type="button">Gradient Between</button>
+            <div id="buttonRow4" class="buttonRow">
             </div>
         </div>
         <div style="width:160px">
@@ -441,6 +453,7 @@
         }
 
         function hueDiff(a, b) {
+            if (a.s == 0 || b.s == 0) return Math.abs(a.s - b.s);
             const diff = Math.abs(a.h - b.h);
             return diff <= 180 ? diff : 360 - diff;
         }
@@ -450,37 +463,32 @@
         function createManyGradients() {
             const buttonRow3 = document.getElementById("buttonRow3");
             const bits = ["r", "g", "b", "c", "m", "y"];
-            const gradientBitLists = getPermutations(bits).map(l => l.slice(0, -1));
-            let gradients = [];
-            for (const gradientBits of gradientBitLists) {
-                const c = { r: 0, g: 0, b: 0, c: 0, m: 0, y: 0 };
-                let gradient = [];
-                for (bit of gradientBits) {
-                    c[bit] = 1;
-                    gradient.push(findColour(c));
-                }
-                let looksOK = true;
-                const midColour = gradient[2];
-                if (midColour.r == midColour.g && midColour.r == midColour.b && midColour.c == midColour.m && midColour.c == midColour.y) {
-                    // grey
-                    continue;
-                }
-                let cumulativeDiff = 0; 
-                for (let i = 1; i < gradient.length; i++) {
-                    const prevColour = gradient[i - 1];
-                    const colour = gradient[i];
-                    const diff = hueDiff(prevColour, colour);
-                    cumulativeDiff += diff;
-                    if (diff > 40 || cumulativeDiff > 100) {
-                        looksOK = false;
-                        continue;
-                    }
-                }
-                if (!looksOK) continue;
-                gradient = [referenceColours[0], ...gradient, referenceColours[63]];
-                gradients.push(gradient);
+            const pairs = [
+                ["r", "g"],
+                ["g", "r"],
+                ["b", "r"],
+                ["b", "g"],
+                ["c", "r"],
+                ["c", "y"],
+                ["m", "r"],
+                ["m", "b"],
+                ["m", "y"],
+                ["y", "b"],
+                ["y", "m"],
+            ];
+            const black = referenceColours[0];
+            const white = referenceColours[63];
+
+            for (const pair of pairs) {
+                let c1 = { r: 0, g: 0, b: 0, c: 0, m: 0, y: 0 };
+                c1[pair[0]] = 1;
+                c1 = findColour(c1);
+                const c2 = { r: 1, g: 1, b: 1, c: 1, m: 1, y: 1 };
+                c2[pair[1]] = 0;
+                const gradient = getGradientBetween(c1, c2);
+                stockGradients.push([black, ...gradient, white]);
             }
-            stockGradients = [gradients[2], gradients[3], gradients[14], gradients[15], gradients[18], gradients[19]];
+
             for (let i = 0; i < stockGradients.length; i++) {
                 const gradient = stockGradients[i];
                 for (const colour of gradient) {
@@ -512,13 +520,18 @@
             return results;
         };
 
+        function colourToHex(colour) {
+            const c = colour.colour;
+            return `#${hex(c[0])}${hex(c[1])}${hex(c[2])}`;
+        }
+
         function createButton(buttonRow, colour, isDuplicate, gradientIndex) {
             const button = document.createElement("button");
             button.className = "colourButton";
             button.type = "button";
             button.setAttribute("i", colour.index);
             if (gradientIndex != null) button.setAttribute("g", gradientIndex);
-            const background = `#${hex(colour.colour[0])}${hex(colour.colour[1])}${hex(colour.colour[2])}`;
+            const background = colourToHex(colour);
             button.style.background = background;
             if (colour.l < 50) button.style.color = "white";
             if (isDuplicate) {
@@ -529,6 +542,7 @@
         }
 
         let currentColour = referenceColours[0];
+        let prevColour = currentColour;
         let brushRadius = 3;
 
         function setPreviewRadius() {
@@ -545,35 +559,29 @@
         setPreviewRadius();
 
         function onGenerateGradientClick() {
-            generateGradient(currentColour);
+            const gradient1 = getRandomGradient(currentColour);
+
+            setCustomGradient(gradient1, document.getElementById("buttonRow2"), 1);
+        }
+        function onGenerateGradient2Click() {
+            const gradient2 = getGradientBetween(prevColour, currentColour);
+
+            setCustomGradient(gradient2, document.getElementById("buttonRow4"), 2);
         }
 
         document.getElementById("generateGradient").onclick = onGenerateGradientClick;
+        document.getElementById("generateGradient2").onclick = onGenerateGradient2Click;
 
-        /**
-         * @param colour - the colour to find compatible colours to
-         */
-        function getCompatibleColoursTo(c) {
+        function calculateGlitchFactor(c1, c2) {
             let bits = ["r", "g", "b", "c", "m", "y"];
-
-            // recursively find compatible colours
-            // lighterOrDarker {number} - 0 for darker, 1 for lighter
-            function a(colour, lighterOrDarker) {
-                let colours = new Set();
-                for (const bit of bits) {
-                    const c = structuredClone(colour);
-                    if (c[bit] == lighterOrDarker) continue;
-                    c[bit] = lighterOrDarker; // make it 1 bit lighter or darker
-                    colours.add(findColour(c));
-                    a(c, lighterOrDarker).forEach(c => colours.add(c));
-                }
-                return colours;
+            let lighterBits = 0;
+            let darkerBits = 0;
+            for (const bit of bits) {
+                if (c1[bit] > c2[bit]) lighterBits++;
+                if (c1[bit] < c2[bit]) darkerBits++;
             }
-
-            // return all darker colours and all lighter colours
-            return [...a(c, 0), ...a(c, 1)];
+            return Math.min(lighterBits, darkerBits);
         }
-
 
         function isNumber(value) {
             return Number.isFinite(value);
@@ -582,14 +590,17 @@
         let currentGradient = null;
 
         function changeCurrentColour(colourIndex, gIndex) {
-            if (colourIndex !== null) currentColour = referenceColours[colourIndex];
+            if (colourIndex !== null) {
+                prevColour = currentColour;
+                currentColour = referenceColours[colourIndex];
+
+                document.getElementById("generateGradient").style.background = colourToHex(currentColour);
+                document.getElementById("generateGradient2").style.background = colourToHex(prevColour);
+            }
             currentGradient = gIndex;
 
-            const neighbours = getCompatibleColoursTo(currentColour);
-
             var div = document.getElementById("currentColour");
-            const background = `#${hex(currentColour.colour[0])}${hex(currentColour.colour[1])}${hex(currentColour.colour[2])}`;
-            div.style.background = background;
+            div.style.background = colourToHex(currentColour);
 
             var box = document.getElementById("currentColourBox");
             box.style.background = currentColour.l >= 50 ? "black" : "white";
@@ -597,13 +608,23 @@
             const buttons = document.getElementById("buttonRow").children;
             const buttons2 = document.getElementById("buttonRow2").children;
             const buttons3 = document.getElementById("buttonRow3").children;
-            for (const thisButton of [...buttons, ...buttons2, ...buttons3]) {
+            const buttons4 = document.getElementById("buttonRow4").children;
+            for (const thisButton of [...buttons, ...buttons2, ...buttons3, ...buttons4]) {
                 const buttonColour = referenceColours[parseInt(thisButton.getAttribute("i"))];
-                if (neighbours.includes(buttonColour)) {
-                    thisButton.classList.add("neighbour");
-                } else {
-                    thisButton.classList.remove("neighbour");
-                }
+                const glitchFactor = calculateGlitchFactor(currentColour, buttonColour);
+                thisButton.classList.remove("glitch1");
+                thisButton.classList.remove("glitch2");
+                thisButton.classList.remove("glitch3");
+                thisButton.classList.remove("glitch");
+                if (glitchFactor)
+                    thisButton.classList.add("glitch");
+                if (glitchFactor == 1)
+                    thisButton.classList.add("glitch1");
+                if (glitchFactor == 2)
+                    thisButton.classList.add("glitch2");
+                if (glitchFactor == 3)
+                    thisButton.classList.add("glitch3");
+                
                 if (isNumber(currentGradient) && thisButton.getAttribute("g") == currentGradient) {
                     thisButton.classList.add("gradient");
                 } else {
@@ -624,11 +645,9 @@
             changeCurrentColour(i, g);
         }
 
-        let customGradient;
+        const customGradient = [];
 
-        function generateGradient(targetColour) {
-            var row = document.getElementById("buttonRow2");
-            row.innerHTML = "";
+        function getRandomGradient(targetColour) {
             let gradient = [targetColour];
             let c = structuredClone(targetColour);
             let bits = ["r", "g", "b", "c", "m", "y"];
@@ -659,11 +678,41 @@
                     }
                 }
             }
+            return gradient;
+        }
+
+        function setCustomGradient(gradient, buttonRow, index) {
+            buttonRow.innerHTML = "";
             for (const colour of gradient) {
-                createButton(row, colour, false, -1);
+                createButton(buttonRow, colour, false, -index);
             }
-            customGradient = gradient;
-            changeCurrentColour(null, -1);
+            customGradient[index] = gradient;
+            changeCurrentColour(null, -index);
+        }
+
+        function getGradientBetween(startColour, targetColour) {
+            let bestGradient;
+            let lowestDiff = Number.MAX_SAFE_INTEGER;
+            const bits = ["r", "g", "b", "c", "m", "y"];
+            for (const theseBits of getPermutations(bits)) {
+                const gradient = [startColour];
+                let c = structuredClone(startColour);
+                let diff = 0;
+                let prevColour;
+                for (const bit of bits) {
+                    if (c[bit] == targetColour[bit]) continue;
+                    prevColour = structuredClone(c);
+                    c[bit] = targetColour[bit];
+                    const d = hueDiff(findColour(prevColour), findColour(c));
+                    diff += d * d;
+                    gradient.push(findColour(c));
+                }
+                if (diff < lowestDiff) {
+                    lowestDiff = diff;
+                    bestGradient = gradient;
+                }
+            }
+            return bestGradient;
         }
 
         function findColour(c) {
@@ -1065,8 +1114,8 @@
 
             let colourSet = uniqueColours;
             if (isNumber(currentGradient)) {
-                if (currentGradient == -1) {
-                    colourSet = customGradient;
+                if (currentGradient < 0) {
+                    colourSet = customGradient[-currentGradient];
                 } else {
                     colourSet = stockGradients[currentGradient];
                 }
