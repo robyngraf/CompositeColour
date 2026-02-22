@@ -49,6 +49,13 @@
             align-items: center;
         }
 
+        button div {
+            width: 10px;
+            height: 10px;
+            display: inline-block;
+            background: black;
+        }
+
         .duplicate {
             border-color: white;
         }
@@ -205,10 +212,10 @@
             </div>
         </div>
         <div>
-            <button id="generateGradient" type="button">Gradient Including</button>
+            <button id="generateGradient" type="button">Gradient <div> </div>🠞<div class="currentColour"> </div>🠞<div style="background: white;"> </div></button>
             <div id="buttonRow2" class="buttonRow">
             </div>
-            <button id="generateGradient2" type="button">Gradient Between</button>
+            <button id="generateGradient2" type="button">Gradient <div class="prevColour"> </div>🠞<div class="currentColour"> </div></button>
             <div id="buttonRow4" class="buttonRow">
             </div>
         </div>
@@ -591,11 +598,18 @@
 
         function changeCurrentColour(colourIndex, gIndex) {
             if (colourIndex !== null) {
-                prevColour = currentColour;
-                currentColour = referenceColours[colourIndex];
+                const c = referenceColours[colourIndex];
+                if (currentColour != c) {
+                    prevColour = currentColour;
+                    currentColour = c;
 
-                document.getElementById("generateGradient").style.background = colourToHex(currentColour);
-                document.getElementById("generateGradient2").style.background = colourToHex(prevColour);
+                    for (const div of document.getElementsByClassName('currentColour')) {
+                        div.style.background = colourToHex(currentColour);
+                    }
+                    for (const div of document.getElementsByClassName('prevColour')) {
+                        div.style.background = colourToHex(prevColour);
+                    }
+                }
             }
             currentGradient = gIndex;
 
