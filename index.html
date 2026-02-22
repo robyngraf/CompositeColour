@@ -1295,6 +1295,8 @@
             fileData = event.target.result;
             await readFile();
 
+            if ((width > 100 || height > 100) && isBig) changeSize();
+
             renderColour();
             renderToMonoBuffer();
             renderBw();
