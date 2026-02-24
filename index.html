@@ -133,6 +133,7 @@
             display: flex;
             flex-direction: row;
             flex-wrap: wrap;
+            user-select: none;
         }
 
         #tools > div {
@@ -145,6 +146,7 @@
 
         #topControls {
             display: flex;
+            user-select: none;
         }
         #topControls > div {
             display: flex;
@@ -168,7 +170,7 @@
     <div id="topControls">
         <div id="matches">
             <label for="colourMatch"><input type="checkbox" id="colourMatch" checked>&nbsp;Match RGB</label>
-            <label for="hueMatch"><input type="checkbox" id="hueMatch" checked>&nbsp;Match hue</label>
+            <label for="hueMatch"><input type="checkbox" id="hueMatch">&nbsp;Match colour</label>
             <label for="saturationMatch"><input type="checkbox" id="saturationMatch">&nbsp;Match saturation</label>
             <label for="lightnessMatch"><input type="checkbox" id="lightnessMatch">&nbsp;Match lightness</label>
             <button id="reload" type="button" disabled>Reprocess</button>
@@ -460,9 +462,26 @@
         }
 
         function hueDiff(a, b) {
-            if (a.s == 0 || b.s == 0) return Math.abs(a.s - b.s);
-            const diff = Math.abs(a.h - b.h);
-            return diff <= 180 ? diff : 360 - diff;
+            let diff = Math.abs(a.h - b.h);
+            diff = diff <= 180 ? diff : 360 - diff;
+
+            function curve(s) {
+                if (s < 20) return easeInOutCubic(s / 20);
+                return 1;
+            }
+
+            function sFactor(c) {
+                // sFactor is near zero if colour is near black, grey or white, otherwise sFactor is 1
+                return curve(c.s) * curve(c.l) * curve(100 - c.l);
+            }
+
+            const sFactorA = sFactor(a);
+            const sFactorB = sFactor(b);
+
+            // return near 15 if one and only one colour is near black, grey or white
+            // return near zero if both colours are near black, grey or white
+            // otherwise return the difference between the two hues in degrees
+            return diff * sFactorA * sFactorB + (1 - sFactorA) * sFactorB * 15 + (1 - sFactorB) * sFactorA * 15;
         }
 
         let stockGradients = [];
@@ -1427,22 +1446,18 @@
                     (aColour[2] - bColour[2])
                 );
             }
-            if (isHueMatch && !override) {
-                function sFactor(s) {
-                    if (s < 20) return easeInOutCubic(s / 20);
-                    return 1;
+            if (!override) {
+                if (isHueMatch) {
+                    diff.push(hueDiff(a, b) * 255 / 180);
                 }
-
-                diff.push(
-                    hueDiff(a, b) * sFactor(a.s) * sFactor(b.s) * 255 / 180
-                );
+                if (isSaturationMatch) {
+                    diff.push((a.s - b.s) * 2.55);
+                }
+                if (isLightnessMatch) {
+                    diff.push((a.l - b.l) * 2.55);
+                }
             }
-            if (isSaturationMatch && !override) {
-                diff.push((a.s - b.s) * 2.55);
-            }
-            if (isLightnessMatch && !override) {
-                diff.push((a.l - b.l) * 2.55);
-            }
+            
             const dist = diff.reduce((a, v) => a + v * v, 0);
             return dist;
         }
@@ -1472,7 +1487,7 @@
                 h = s = 0; // Achromatic (grey)
             } else {
                 let d = max - min;
-                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                s = d / max;
 
                 switch (max) {
                     case r:
