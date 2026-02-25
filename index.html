@@ -1179,15 +1179,19 @@
         
         document.getElementById("changeSize").onclick = changeSize;
 
-        let isBig = true;
+        let canvasZoom = 1;
 
-        function changeSize() {
-            isBig = !isBig;
+        function changeSize(size) {
+            if (isNumber(size)) {
+                canvasZoom = size;
+            } else {
+                canvasZoom = (canvasZoom + 2) % 3;
+            }
             const canvases = document.querySelectorAll('.canvasBackground');
             for (const canvas of canvases) {
-                canvas.style.zoom = isBig ? 6 : 1;
+                canvas.style.zoom = [1, 6, 12][canvasZoom];
             }
-            document.getElementById("changeSize").innerText = isBig ? "Unembiggen" : "Reëmbiggen";
+            document.getElementById("changeSize").innerText = canvasZoom > 0 ? "Unembiggen" : "Reëmbiggen";
         }
 
         if (window.devicePixelRatio != 1) {
@@ -1314,7 +1318,9 @@
             fileData = event.target.result;
             await readFile();
 
-            if ((width > 100 || height > 100) && isBig) changeSize();
+            if ((width > 100 || height > 100) && canvasZoom > 0) {
+                changeSize(0);
+            }
 
             renderColour();
             renderToMonoBuffer();
