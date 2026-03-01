@@ -180,6 +180,7 @@
         File load/save functionality won't work unless you save this HTML file to your computer. Also might only work in Chrome or Edge.
     </p>
     <input type="file" id="fileInput" accept="image/*">
+    <label for="resizeOnLoad"><input type="checkbox" id="resizeOnLoad" checked>Resize large image on load</label>
     <div id="topControls">
         <div id="matches">
             <label for="colourMatch"><input type="checkbox" id="colourMatch" checked>&nbsp;Match RGB</label>
@@ -262,6 +263,15 @@
 
         document.getElementById("fileInput").addEventListener("change", handleFile);
         
+        document.getElementById("resizeOnLoad").onclick = onResizeOnLoadClick;
+
+        
+        let resizeOnLoad;
+        function onResizeOnLoadClick() {
+            resizeOnLoad = document.getElementById("resizeOnLoad").checked;
+        }
+        onResizeOnLoadClick();
+            
         document.getElementById("colourMatch").onclick = onHueMatchClick;
         document.getElementById("hueMatch").onclick = onHueMatchClick;
         document.getElementById("saturationMatch").onclick = onHueMatchClick;
@@ -1359,6 +1369,7 @@
                 height = upng.height;
             } else {
                 function chooseResize(width, height) {
+                    if (!resizeOnLoad) return null;
                     if (width <= 420 && height <= 672) return null;
                     const ratio = width * 672 / 420 / height;
                     if (ratio >= 1) {
