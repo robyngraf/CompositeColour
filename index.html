@@ -177,7 +177,8 @@
 
 <body>
     <p>
-        File load/save functionality won't work unless you save this HTML file to your computer. Also might only work in Chrome or Edge.
+        File load/save buttons won't work unless you save this HTML file to your computer. Also might only work in Chrome or Edge.
+        However drag/dropping files here or right-clicking to save should work.
     </p>
     <input type="file" id="fileInput" accept="image/*">
     <label for="resizeOnLoad"><input type="checkbox" id="resizeOnLoad" checked>Resize large image on load</label>
@@ -187,7 +188,7 @@
             <label for="hueMatch"><input type="checkbox" id="hueMatch">&nbsp;Match colour</label>
             <label for="saturationMatch"><input type="checkbox" id="saturationMatch">&nbsp;Match saturation</label>
             <label for="lightnessMatch"><input type="checkbox" id="lightnessMatch">&nbsp;Match lightness</label>
-            <button id="reload" type="button" disabled>Reprocess</button>
+            <button id="reload" type="button" disabled>Reload & reprocess</button>
         </div>
         <div>
             <button id="save" type="button">Save Master</button>
@@ -271,6 +272,17 @@
             resizeOnLoad = document.getElementById("resizeOnLoad").checked;
         }
         onResizeOnLoadClick();
+
+        function handleDragOver(event) {
+            event.preventDefault(); // Prevents file from being opened
+        }
+        document.addEventListener('dragover', handleDragOver, false);
+
+        function handleDrop(event) {
+            event.preventDefault(); // Prevents file from being opened
+            handleFile({target: {files: event.dataTransfer.files }});
+        }
+        document.addEventListener('drop', handleDrop, false);
             
         document.getElementById("colourMatch").onclick = onHueMatchClick;
         document.getElementById("hueMatch").onclick = onHueMatchClick;
