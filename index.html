@@ -219,6 +219,7 @@
     <div id="tools">
         <div>
             <div id="buttonRow" class="buttonRow"> </div>
+            <div id="colourName">&nbsp;</div>
             <div id="currentColourBox">
                 <div id="currentColour"> </div>
             </div>
@@ -414,6 +415,72 @@
             renderArtifactColors();
         }
 
+        const colourNames = {
+            0: "Black",
+            1: "Dark Red",
+            2: "Forest Green",
+            3: "Olive",
+            4: "Navy",
+            5: "Deep Purple",
+            6: "Deep Teal",
+            7: "Grey 2",
+            8: "Deep Sea",
+            9: "Brown 2",
+            10: "Emerald",
+            11: "Mint 2",
+            12: "Royal Blue",
+            13: "Violet 2",
+            14: "Teal",
+            15: "Soft Cyan 2",
+            16: "Dark Plum",
+            17: "Cool Red",
+            18: "Moss Green 2",
+            19: "Copper 2",
+            20: "Indigo",
+            21: "Purple",
+            22: "Sky Blue 2",
+            23: "Lavender 2",
+            24: "Faded Navy 2",
+            25: "Plum 2",
+            26: "Sea Green 2",
+            27: "Kakhi 2",
+            28: "Electric Blue",
+            29: "Orchid",
+            30: "Bright Sky",
+            31: "Mist Blue",
+            32: "Olive Drab",
+            33: "Rust",
+            34: "Lime",
+            35: "Mustard",
+            36: "Faded Navy",
+            37: "Plum",
+            38: "Sea Green",
+            39: "Kakhi",
+            40: "Moss Green",
+            41: "Copper",
+            42: "Bright Green",
+            43: "Yellow Green",
+            44: "Sky Blue",
+            45: "Lavender",
+            46: "Bright Aqua",
+            47: "Pastel Mint",
+            48: "Brown",
+            49: "Coral",
+            50: "Mint",
+            51: "Gold",
+            52: "Violet",
+            53: "Hot Pink",
+            54: "Soft Cyan",
+            55: "Light Pink",
+            56: "Grey",
+            57: "Salmon",
+            58: "Light Green",
+            59: "Light Yellow",
+            60: "Periwinkle",
+            61: "Pink",
+            62: "Bright Cyan",
+            63: "White"
+        };
 
         function colours() {
             const colours = [];
@@ -434,6 +501,7 @@
                 ];
                 const hsl = rgbToHsl(colour[0], colour[1], colour[2]);
                 colours.push({
+                    name: colourNames[index],
                     r: r,
                     g: g,
                     b: b,
@@ -454,7 +522,7 @@
         const uniqueColours = [];
         const duplicateColours = [];
         findUniqueColours();
-
+        
         function hex(value) {
             return value.toString(16).padStart(2, "0");
         }
@@ -672,6 +740,11 @@
 
             var box = document.getElementById("currentColourBox");
             box.style.background = currentColour.l >= 50 ? "black" : "white";
+
+            var nameDiv = document.getElementById("colourName");
+            nameDiv.innerText = currentColour.name;
+            nameDiv.style.background = colourToHex(currentColour);
+            nameDiv.style.color = currentColour.l >= 50 ? "black" : "white";
 
             const buttons = document.getElementById("buttonRow").children;
             const buttons2 = document.getElementById("buttonRow2").children;
