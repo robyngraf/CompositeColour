@@ -144,6 +144,17 @@
             width: min-content;
         }
 
+        div:has(#hideTop) {
+            border-bottom: 1px solid black;
+            max-height: 33%;
+            overflow: auto;
+        }
+
+        div:has(#hideBottom) {
+            border-top: 1px solid black;
+            max-height: max(333px, 33%);
+            overflow: auto;
+        }
         #topControls {
             display: flex;
             user-select: none;
@@ -155,6 +166,11 @@
             margin: 10px;
         }
 
+        .hideButton {
+            float: right;
+            margin-block: 10px;
+        }
+
         #canvasArea label {
             flex-direction: column;
             display: inline-flex;
@@ -163,6 +179,7 @@
         #canvasArea {
             overflow: auto;
             flex: 1;
+            min-height: 100px;
         }
 
         body {
@@ -172,29 +189,43 @@
             margin: 0;
             padding-inline: 10px;
         }
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 
 <body>
-    <p>
-        File load/save buttons won't work unless you save this HTML file to your computer. Also might only work in Chrome or Edge.
-        However drag/dropping files here or right-clicking to save should work.
-    </p>
-    <input type="file" id="fileInput" accept="image/*">
-    <label for="resizeOnLoad"><input type="checkbox" id="resizeOnLoad" checked>Resize large image on load</label>
-    <div id="topControls">
-        <div id="matches">
-            <label for="colourMatch"><input type="checkbox" id="colourMatch" checked>&nbsp;Match RGB</label>
-            <label for="hueMatch"><input type="checkbox" id="hueMatch">&nbsp;Match colour</label>
-            <label for="saturationMatch"><input type="checkbox" id="saturationMatch">&nbsp;Match saturation</label>
-            <label for="lightnessMatch"><input type="checkbox" id="lightnessMatch">&nbsp;Match lightness</label>
-            <button id="reload" type="button" disabled>Reload & reprocess</button>
-        </div>
+    <div>
+        <button id="hideTop" type="button" class="hideButton">Hide</button>
         <div>
-            <button id="save" type="button">Save Master</button>
-            <button id="saveBW" type="button">Save Monochrome</button>
+            <p>
+                File load/save buttons won't work unless you save this HTML file to your computer. Also might only work in Chrome or
+                Edge.
+                However drag/dropping files here or right-clicking to save should work.
+            </p>
+            <input type="file" id="fileInput" accept="image/*">
+            <label for="resizeOnLoad"><input type="checkbox" id="resizeOnLoad" checked>Resize large image on load</label>
+            <div id="topControls">
+                <div id="matches">
+                    <label for="colourMatch"><input type="checkbox" id="colourMatch" checked>&nbsp;Match RGB</label>
+                    <label for="hueMatch"><input type="checkbox" id="hueMatch">&nbsp;Match colour</label>
+                    <label for="saturationMatch"><input type="checkbox" id="saturationMatch">&nbsp;Match saturation</label>
+                    <label for="lightnessMatch"><input type="checkbox" id="lightnessMatch">&nbsp;Match lightness</label>
+                    <button id="reload" type="button" disabled>Reload & reprocess</button>
+                </div>
+                <div>
+                    <button id="save" type="button">Save Master</button>
+                    <button id="saveBW" type="button">Save Monochrome</button>
+                </div>
+                <div>
+                    <button id="saveAllColours" type="button">Save All Colours</button>
+                    <button id="saveAllColourFilters" type="button">Save All Colour Filters</button>
+                    <button id="saveAllColourCovers" type="button">Save All Colour Covers</button>(click 7 times)
+                </div>
+                <button id="changeSize" type="button">Unembiggen</button>
+            </div>
         </div>
-        <button id="changeSize" type="button">Unembiggen</button>
     </div>
     
     <div id="canvasArea">
@@ -214,48 +245,59 @@
             <canvas id="blur" width="48px" height="48px" class="canvasBackground"> </canvas>
         </label>
     </div>
-    🗸 is current colour. <br>
-    🛇 will glitch if next to current colour
-    <div id="tools">
+    <div id="bottomControls">
+        <button id="hideBottom" type="button" class="hideButton">Hide</button>
         <div>
-            <div id="buttonRow" class="buttonRow"> </div>
-            <div id="colourName">&nbsp;</div>
-            <div id="currentColourBox">
-                <div id="currentColour"> </div>
+            🗸 is current colour. <br>
+            🛇 will glitch if next to current colour
+            <div id="tools">
+                <div>
+                    <div id="buttonRow" class="buttonRow"> </div>
+                    <div id="colourName">&nbsp;</div>
+                    <div id="currentColourBox">
+                        <div id="currentColour"> </div>
+                    </div>
+                    <div style="width:160px">
+                        <label for="radius">Brush Size:</label>
+                        <input type="range" id="radius" name="radius" min="0" max="49" value="2" style="width:55px">
+                        <span id="radius-value">3</span>
+                    </div>
+                </div>
+                <div>
+                    <button id="generateGradient" type="button">Gradient <div> </div>🠞<div class="currentColour"> </div>🠞<div
+                            style="background: white;"> </div></button>
+                    <div id="buttonRow2" class="buttonRow">
+                    </div>
+                    <button id="generateGradient2" type="button">Gradient <div class="prevColour"> </div>🠞<div
+                            class="currentColour"> </div></button>
+                    <div id="buttonRow4" class="buttonRow">
+                    </div>
+                </div>
+                <div style="width:160px">
+                    <label for="draw"><input type="radio" id="draw" name="tool" value="draw" checked>&nbsp;Draw</label>
+                    <label for="drawBehind"><input type="radio" id="drawBehind" name="tool" value="drawBehind">&nbsp;Draw
+                        Behind</label>
+                    <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
+                    <label for="eraseColour"><input type="radio" id="eraseColour" name="tool" value="eraseColour">&nbsp;Erase
+                        Colour</label>
+                    <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool"
+                            value="fill">&nbsp;Fill</label>
+                    <label for="pickColour"><input type="radio" id="pickColour" name="tool" value="pickColour">&nbsp;Pick
+                        Colour</label>
+                </div>
+                <div id="buttonRow3" class="buttonRow">
+                </div>
+                <div>
+                    <button id="borderWhite" type="button">White Border</button>
+                    <button id="borderBlack" type="button">Black Border</button>
+                    <button id="borderContrast" type="button">Contrasting Border</button>
+                    <button id="borderMatch" type="button">Matching Border</button>
+                    <button id="borderHypno" type="button">Hypno Border</button>
+                </div>
             </div>
-            <div style="width:160px">
-                <label for="radius">Brush Size:</label>
-                <input type="range" id="radius" name="radius" min="0" max="49" value="2" style="width:55px">
-                <span id="radius-value">3</span>
-            </div>
-        </div>
-        <div>
-            <button id="generateGradient" type="button">Gradient <div> </div>🠞<div class="currentColour"> </div>🠞<div style="background: white;"> </div></button>
-            <div id="buttonRow2" class="buttonRow">
-            </div>
-            <button id="generateGradient2" type="button">Gradient <div class="prevColour"> </div>🠞<div class="currentColour"> </div></button>
-            <div id="buttonRow4" class="buttonRow">
-            </div>
-        </div>
-        <div style="width:160px">
-            <label for="draw"><input type="radio" id="draw" name="tool" value="draw" checked>&nbsp;Draw</label>
-            <label for="drawBehind"><input type="radio" id="drawBehind" name="tool" value="drawBehind">&nbsp;Draw Behind</label>
-            <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
-            <label for="eraseColour"><input type="radio" id="eraseColour" name="tool" value="eraseColour">&nbsp;Erase
-                Colour</label>
-            <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool" value="fill">&nbsp;Fill</label>
-            <label for="pickColour"><input type="radio" id="pickColour" name="tool" value="pickColour">&nbsp;Pick Colour</label>
-        </div>
-        <div id="buttonRow3" class="buttonRow">
-        </div>
-        <div>
-            <button id="borderWhite" type="button">White Border</button>
-            <button id="borderBlack" type="button">Black Border</button>
-            <button id="borderContrast" type="button">Contrasting Border</button>
-            <button id="borderMatch" type="button">Matching Border</button>
-            <button id="borderHypno" type="button">Hypno Border</button>
         </div>
     </div>
+    
     
     <script>
         let width = 48;
@@ -273,6 +315,18 @@
             resizeOnLoad = document.getElementById("resizeOnLoad").checked;
         }
         onResizeOnLoadClick();
+
+        document.getElementById("hideBottom").onclick = hideButton;
+        document.getElementById("hideTop").onclick = hideButton;
+
+        function hideButton(event) {
+            const button = event.target;
+            const parent = button.parentElement;
+            const div = parent.querySelector("div");
+            div.classList.toggle("hidden");
+            const isHidden = div.classList.contains("hidden");
+            button.innerText = isHidden ? "Show" : "Hide";
+        };
 
         function handleDragOver(event) {
             event.preventDefault(); // Prevents file from being opened
@@ -439,7 +493,7 @@
             20: "Indigo",
             21: "Purple",
             22: "Sky Blue 2",
-            23: "Lavender 2",
+            23: "Mauve 2",
             24: "Faded Navy 2",
             25: "Plum 2",
             26: "Sea Green 2",
@@ -447,7 +501,7 @@
             28: "Electric Blue",
             29: "Orchid",
             30: "Bright Sky",
-            31: "Mist Blue",
+            31: "Lavender",
             32: "Olive Drab",
             33: "Rust",
             34: "Lime",
@@ -461,7 +515,7 @@
             42: "Bright Green",
             43: "Yellow Green",
             44: "Sky Blue",
-            45: "Lavender",
+            45: "Mauve",
             46: "Bright Aqua",
             47: "Pastel Mint",
             48: "Brown",
@@ -1377,10 +1431,6 @@
         document.getElementById("saveBW").onclick = saveBW;
 
         async function saveBW() {
-            const canvas = document.getElementById("bw");
-            const ctx = canvas.getContext("2d");
-            const pixelData = ctx.getImageData(0, 0, width, height).data.buffer;
-
             const mimeType = "image/png";
             const promise = window.showSaveFilePicker({
                 startIn: "downloads",
@@ -1394,6 +1444,10 @@
                     },
                 ],
             });
+            
+            const canvas = document.getElementById("bw");
+            const ctx = canvas.getContext("2d");
+            const pixelData = ctx.getImageData(0, 0, width, height).data.buffer;
 
             const png = UPNG.encode(
                 [pixelData], // frames
@@ -1407,6 +1461,150 @@
             const writableStream = await handle.createWritable();
             await writableStream.write(blob);
             await writableStream.close();
+        }
+
+        
+        document.getElementById("saveAllColours").onclick = saveAllColours;
+
+        let saveColourIndex = 0;
+        function saveAllColours() {
+            for (let i = 0; i < 8; i++) {
+                if (saveColourIndex >= uniqueColours.length) return;
+                saveColourAsBW(uniqueColours[saveColourIndex++]);
+            }
+        }
+
+        document.getElementById("saveAllColourFilters").onclick = saveAllColourFilters;
+
+        let saveColourFilterIndex = 0;
+        function saveAllColourFilters() {
+            for (let i = 0; i < 8; i++) {
+                if (saveColourFilterIndex >= uniqueColours.length) return;
+                saveColourAsBW(uniqueColours[saveColourFilterIndex++], true);
+            }
+        }
+
+        document.getElementById("saveAllColourCovers").onclick = saveAllColourCovers;
+
+        let saveColourCoverIndex = 0;
+        function saveAllColourCovers() {
+            for (let i = 0; i < 8; i++) {
+                if (saveColourCoverIndex >= uniqueColours.length) return;
+                saveColourAsBW(uniqueColours[saveColourCoverIndex++], false, true);
+            }
+        }
+
+        function saveColourAsBW(c, isFilter, isCover) {
+            let canvasWidth;
+            let canvasHeight;
+            switch (c.name) {
+                case "Black":
+                case "White":
+                    if (isFilter || isCover) return;
+                    canvasWidth = 1;
+                    canvasHeight = 1;
+                    break;
+                case "Grey":
+                    canvasWidth = 1;
+                    canvasHeight = 2;
+                    break;
+                default:
+                    canvasWidth = 3;
+                    canvasHeight = 2;
+                    break;
+            }
+            
+            let filename;
+            if (isFilter) {
+                filename = c.name + " filter";
+            } else if (isCover) {
+                filename = c.name + " cover";
+            } else {
+                filename = c.name;
+            }
+
+            // 1. Create the canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            const ctx = canvas.getContext('2d');
+
+            // 2. Create raw image data (canvasWidth x canvasHeight pixels, 4 bytes per pixel: R, G, B, A)
+            const imageData = ctx.createImageData(canvasWidth, canvasHeight);
+            const data = imageData.data;
+
+            // Function to set pixel color
+            let setPixel;
+            const getIndex = (x, y) => (y * canvasWidth + x) * 4;
+            if (isFilter) {
+                setPixel = (x, y, l) => {
+                    const index = getIndex(x, y);
+                    data[index + 0] = 0; // R
+                    data[index + 1] = 0; // G
+                    data[index + 2] = 0; // B
+                    data[index + 3] = (1 - l) * 255; // A
+                };
+            } else if (isCover) {
+                setPixel = (x, y, l) => {
+                    const index = getIndex(x, y);
+                    data[index + 0] = l * 255; // R
+                    data[index + 1] = l * 255; // G
+                    data[index + 2] = l * 255; // B
+                    data[index + 3] = l * 255; // A
+                };
+            } else {
+                setPixel = (x, y, l) => {
+                    const index = getIndex(x, y);
+                    data[index + 0] = l * 255; // R
+                    data[index + 1] = l * 255; // G
+                    data[index + 2] = l * 255; // B
+                    data[index + 3] = 255; // A
+                };
+            }
+
+            // 3. Define pixel colors
+            setPixel(0, 0, c.r); // Top-left: Red
+            if (canvasWidth > 1)
+                setPixel(1, 0, c.g); // Top-middle: Green
+            if (canvasWidth > 2)
+                setPixel(2, 0, c.b); // Top-right: Blue
+            if (canvasHeight > 1)
+                setPixel(0, 1, c.c); // Bottom-left: Cyan
+            if (canvasHeight > 1 && canvasWidth > 1)
+                setPixel(1, 1, c.m); // Bottom-middle: Magenta
+            if (canvasHeight > 1 && canvasWidth > 2)
+                setPixel(2, 1, c.y); // Bottom-right: Yellow
+
+            // 4. Put the data onto the canvas
+            ctx.putImageData(imageData, 0, 0);
+
+            const pixelData = ctx.getImageData(0, 0, canvasWidth, canvasHeight).data.buffer;
+
+            const png = UPNG.encode(
+                [pixelData], // frames
+                canvasWidth,
+                canvasHeight,
+                2, // number of colours
+            );
+
+            const mimeType = "image/png";
+            const blob = new Blob([png], { type: mimeType });
+
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Create a temporary anchor element
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = filename + ".png";
+
+            // Append anchor to body, click it, and remove it
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Revoke the blob URL to free up memory
+            URL.revokeObjectURL(blobUrl);
         }
 
         let file;
