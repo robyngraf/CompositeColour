@@ -1354,14 +1354,13 @@
                         }
                     }
 
-                    let c = referenceColours[0];
-                    let a = 0;
-                    if (aImg > 0) {
-                        a = aImg / w > 127 ? 1 : 0;
+                    let colourIndex = 0;
+                    const a = aImg / w > 127 ? 1 : 0;
+                    if (a > 0) {
                         const r = rImg / aImg;
                         const g = gImg / aImg;
                         const b = bImg / aImg;
-                        c = rgbToNearestPaletteColour(r, g, b, colourSet);
+                        colourIndex = rgbToNearestPaletteColour(r, g, b, colourSet);
                     }
 
                     for (let y1 = 0; y1 < yRes; y1++) {
@@ -1373,7 +1372,7 @@
                             const x2 = x + x1;
                             if (x2 >= width) break;
                             alphaRow[x2] = a;
-                            colourRow[x2] = c;
+                            colourRow[x2] = colourIndex;
                         }
                     }
                 }
