@@ -212,6 +212,11 @@
                     <label for="hueMatch"><input type="checkbox" id="hueMatch">&nbsp;Match colour</label>
                     <label for="saturationMatch"><input type="checkbox" id="saturationMatch">&nbsp;Match saturation</label>
                     <label for="lightnessMatch"><input type="checkbox" id="lightnessMatch">&nbsp;Match lightness</label>
+                    <label for="pixellateNone"><input type="radio" id="pixellateNone" name="pixellate" value="none" checked>Full resolution</label>
+                    <label for="pixellate2x2"><input type="radio" id="pixellate2x2" name="pixellate" value="2x2">Pixellate 2x2</label>
+                    <label for="pixellate3x2"><input type="radio" id="pixellate3x2" name="pixellate" value="3x2">Pixellate 3x2</label>
+                    <label for="pixellate6x6"><input type="radio" id="pixellate6x6" name="pixellate" value="6x6">Pixellate 6x6</label>
+                    <label for="pixellate12x12"><input type="radio" id="pixellate12x12" name="pixellate" value="12x12">Pixellate 12x12</label>
                     <button id="reload" type="button" disabled>Reload & reprocess</button>
                 </div>
                 <div>
@@ -1304,6 +1309,14 @@
 
         function processImage() {
             if (!img) return;
+
+            const selectedPixellation = document.querySelector("input[name='pixellate']:checked")?.value;
+            let xRes = 1;
+            let yRes = 1;
+            if (selectedPixellation.includes("x")) {
+                [xRes, yRes] = selectedPixellation.split("x").map(n => parseInt(n));
+            }
+
             const ctx = img.getContext("2d", { willReadFrequently: true });
             const imgData = ctx.getImageData(0, 0, width, height);
 
@@ -1318,17 +1331,51 @@
 
             // Convert to colour buffer
             // (51 colour palette by default, or 7 if a gradient is selected)
-            for (let y = 0; y < height; y++) {
-                const rowPhase = y % 2;
-                const colourRow = colourBuffer[y] = [];
-                const alphaRow = alphaBuffer[y] = [];
-                for (let x = 0; x < width; x++) {
-                    const idx = (y * width + x) * 4;
-                    const rImg = imgData.data[idx];
-                    const gImg = imgData.data[idx + 1];
-                    const bImg = imgData.data[idx + 2];
-                    alphaRow[x] = imgData.data[idx + 3] > 127 ? 1 : 0;
-                    colourRow[x] = rgbToNearestPaletteColour(rImg, gImg, bImg, colourSet);
+            for (let y = 0; y < height; y += yRes) {
+                for (let x = 0; x < width; x += xRes) {
+                    let rImg = 0;
+                    let gImg = 0;
+                    let bImg = 0;
+                    let aImg = 0;
+                    let w = 0;
+                    for (let y1 = 0; y1 < yRes; y1++) {
+                        const y2 = y + y1;
+                        if (y2 >= height) break;
+                        for (let x1 = 0; x1 < xRes; x1++) {
+                            const x2 = x + x1;
+                            if (x2 >= width) break;
+                            const idx = (y2 * width + x2) * 4;
+                            const a = imgData.data[idx + 3];
+                            rImg += a * imgData.data[idx];
+                            gImg += a * imgData.data[idx + 1];
+                            bImg += a * imgData.data[idx + 2];
+                            aImg += a;
+                            w += 1;
+                        }
+                    }
+
+                    let c = referenceColours[0];
+                    let a = 0;
+                    if (aImg > 0) {
+                        a = aImg / w > 127 ? 1 : 0;
+                        const r = rImg / aImg;
+                        const g = gImg / aImg;
+                        const b = bImg / aImg;
+                        c = rgbToNearestPaletteColour(r, g, b, colourSet);
+                    }
+
+                    for (let y1 = 0; y1 < yRes; y1++) {
+                        const y2 = y + y1;
+                        if (y2 >= height) break;
+                        const colourRow = colourBuffer[y2] || (colourBuffer[y2] = []);
+                        const alphaRow = alphaBuffer[y2] || (alphaBuffer[y2] = []);
+                        for (let x1 = 0; x1 < xRes; x1++) {
+                            const x2 = x + x1;
+                            if (x2 >= width) break;
+                            alphaRow[x2] = a;
+                            colourRow[x2] = c;
+                        }
+                    }
                 }
             }
             renderColour();
