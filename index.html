@@ -285,6 +285,7 @@
                     <label for="erase"><input type="radio" id="erase" name="tool" value="erase">&nbsp;Erase</label>
                     <label for="eraseColour"><input type="radio" id="eraseColour" name="tool" value="eraseColour">&nbsp;Erase
                         Colour</label>
+                    <label for="replaceColour"><input type="radio" id="replaceColour" name="tool" value="replaceColour">&nbsp;Replace Colour</label>
                     <label for="fill" style="display: none;"><input type="radio" id="fill" name="tool"
                             value="fill">&nbsp;Fill</label>
                     <label for="pickColour"><input type="radio" id="pickColour" name="tool" value="pickColour">&nbsp;Pick
@@ -954,6 +955,7 @@
         let isMouseDown;
         let isErase;
         let isEraseColour;
+        let isReplaceColour;
         let isDrawBehind;
         let isPickColour;
 
@@ -1003,7 +1005,7 @@
             isMouseDown = false;
             const canvas = event.target;
             const [endX, endY] = getMousePosition(event);
-            if (isEraseColour) {
+            if (isEraseColour || isReplaceColour) {
                 const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
                 // Reset canvas image so we can read from it to determine where to erase
@@ -1026,6 +1028,9 @@
                 const a = data[mouseIdx + 3];
                 const threshold = 25;
                 if (!a) return;
+                
+                const colour = isEraseColour ? 0 : currentColour.index;
+                const alpha = isEraseColour ? 0 : 1;
 
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) { 
@@ -1035,8 +1040,8 @@
                         if (Math.abs(data[idx + 2] - b) > threshold) continue;
                         if (Math.abs(data[idx + 3] - a) > threshold) continue;
 
-                        colourBuffer[y][x] = 0;
-                        alphaBuffer[y][x] = 0;
+                        colourBuffer[y][x] = colour;
+                        alphaBuffer[y][x] = alpha;
                     }
                 }
             } else if (isPickColour) {
@@ -1106,6 +1111,7 @@
             const selectedTool = document.querySelector("input[name='tool']:checked")?.value;
             isErase = selectedTool == "erase";
             isEraseColour = selectedTool == "eraseColour";
+            isReplaceColour = selectedTool == "replaceColour";
             isDrawBehind = selectedTool == "drawBehind";
             isPickColour = selectedTool == "pickColour";
 
@@ -1130,7 +1136,7 @@
             const imgData = ctx.getImageData(0, 0, width, height);
             const data = imgData.data;
 
-            if (isEraseColour) {
+            if (isEraseColour || isReplaceColour) {
                 const mouseIdx = (endY * width + endX) * 4;
                 const r = data[mouseIdx];
                 const g = data[mouseIdx + 1];
@@ -1138,6 +1144,11 @@
                 const a = data[mouseIdx + 3];
                 const threshold = 25;
                 if (!a) return;
+
+                const r2 = isEraseColour ? 0 : currentColour.colour[0];
+                const g2 = isEraseColour ? 0 : currentColour.colour[1];
+                const b2 = isEraseColour ? 0 : currentColour.colour[2];
+                const a2 = isEraseColour ? 0 : 255;
 
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) {
@@ -1147,10 +1158,10 @@
                         if (Math.abs(data[idx + 2] - b) > threshold) continue;
                         if (Math.abs(data[idx + 3] - a) > threshold) continue;
                         
-                        data[idx] = 0;
-                        data[idx + 1] = 0;
-                        data[idx + 2] = 0;
-                        data[idx + 3] = 0;
+                        data[idx] = r2;
+                        data[idx + 1] = g2;
+                        data[idx + 2] = b2;
+                        data[idx + 3] = a2;
                     }
                 }
             } else if (isPickColour) {
