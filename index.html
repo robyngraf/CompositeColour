@@ -212,6 +212,7 @@
                     <label for="hueMatch"><input type="checkbox" id="hueMatch">&nbsp;Match colour</label>
                     <label for="saturationMatch"><input type="checkbox" id="saturationMatch">&nbsp;Match saturation</label>
                     <label for="lightnessMatch"><input type="checkbox" id="lightnessMatch">&nbsp;Match lightness</label>
+                    <label for="fixBrightness"><input type="checkbox" id="fixBrightness" checked>&nbsp;Adjust Brightness</label>
                     <label for="pixellateNone"><input type="radio" id="pixellateNone" name="pixellate" value="none" checked>Full resolution</label>
                     <label for="pixellate2x2"><input type="radio" id="pixellate2x2" name="pixellate" value="2x2">Pixellate 2x2</label>
                     <label for="pixellate3x2"><input type="radio" id="pixellate3x2" name="pixellate" value="3x2">Pixellate 3x2</label>
@@ -344,17 +345,20 @@
             handleFile({target: {files: event.dataTransfer.files }});
         }
         document.addEventListener('drop', handleDrop, false);
-            
+
+        document.getElementById("fixBrightness").onclick = onHueMatchClick;
         document.getElementById("colourMatch").onclick = onHueMatchClick;
         document.getElementById("hueMatch").onclick = onHueMatchClick;
         document.getElementById("saturationMatch").onclick = onHueMatchClick;
         document.getElementById("lightnessMatch").onclick = onHueMatchClick;
 
+        let isFixBrightness;
         let isColourMatch;
         let isHueMatch;
         let isSaturationMatch;
         let isLightnessMatch;
         function onHueMatchClick() {
+            isFixBrightness = document.getElementById("fixBrightness").checked;
             isColourMatch = document.getElementById("colourMatch").checked;
             isHueMatch = document.getElementById("hueMatch").checked;
             isSaturationMatch = document.getElementById("saturationMatch").checked;
@@ -1339,11 +1343,45 @@
                     colourSet = stockGradients[currentGradient];
                 }
             }
+            
+            let minimumAdjust = 0;
+            let rangeAdjust = 1;
+            if (isFixBrightness) {
+                let rMax = 0;
+                let rMin = 255;
+                let gMax = 0;
+                let gMin = 255;
+                let bMax = 0;
+                let bMin = 255;
+                for (let y = 0; y < height; y += 1) {
+                    for (let x = 0; x < width; x += 1) {
+                        const idx = (y * width + x) * 4;
+                        const a = imgData.data[idx + 3];
+                        if (a <= 127) continue;
+                        const r = imgData.data[idx];
+                        const g = imgData.data[idx + 1];
+                        const b = imgData.data[idx + 2];
+                        if (r > rMax) rMax = r;
+                        if (r < rMin) rMin = r;
+                        if (g > gMax) gMax = g;
+                        if (g < gMin) gMin = g;
+                        if (b > bMax) bMax = b;
+                        if (b < bMin) bMin = b;
+                    }
+                }
+                const min = Math.min(rMin, gMin, bMin);
+                const max = Math.max(rMax, gMax, bMax);
+                const range = max - min;
+                minimumAdjust = min;
+                rangeAdjust = 255 / range;
+            }
+            
 
             // Convert to colour buffer
             // (51 colour palette by default, or 7 if a gradient is selected)
             for (let y = 0; y < height; y += yRes) {
                 for (let x = 0; x < width; x += xRes) {
+                    // Iterate over image, in chunks if we're pixellating
                     let rImg = 0;
                     let gImg = 0;
                     let bImg = 0;
@@ -1353,6 +1391,7 @@
                         const y2 = y + y1;
                         if (y2 >= height) break;
                         for (let x1 = 0; x1 < xRes; x1++) {
+                            // Iterate over the big pixels when pixellating
                             const x2 = x + x1;
                             if (x2 >= width) break;
                             const idx = (y2 * width + x2) * 4;
@@ -1368,9 +1407,14 @@
                     let colourIndex = 0;
                     const a = aImg / w > 127 ? 1 : 0;
                     if (a > 0) {
-                        const r = rImg / aImg;
-                        const g = gImg / aImg;
-                        const b = bImg / aImg;
+                        let r = rImg / aImg;
+                        let g = gImg / aImg;
+                        let b = bImg / aImg;
+                        if (isFixBrightness) {
+                            r = (r - minimumAdjust) * rangeAdjust;
+                            g = (g - minimumAdjust) * rangeAdjust;
+                            b = (b - minimumAdjust) * rangeAdjust;
+                        }
                         colourIndex = rgbToNearestPaletteColour(r, g, b, colourSet);
                     }
 
