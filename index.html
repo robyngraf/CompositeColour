@@ -212,7 +212,8 @@
                     <label for="hueMatch"><input type="checkbox" id="hueMatch">&nbsp;Match colour</label>
                     <label for="saturationMatch"><input type="checkbox" id="saturationMatch">&nbsp;Match saturation</label>
                     <label for="lightnessMatch"><input type="checkbox" id="lightnessMatch">&nbsp;Match lightness</label>
-                    <label for="fixBrightness"><input type="checkbox" id="fixBrightness" checked>&nbsp;Adjust Brightness</label>
+                    <label for="fixBrightness"><input type="checkbox" id="fixBrightness" checked>&nbsp;Max Contrast</label>
+                    <label for="fixWhiteBalance"><input type="checkbox" id="fixWhiteBalance" checked>&nbsp;Fix White Balance</label>
                     <label for="pixellateNone"><input type="radio" id="pixellateNone" name="pixellate" value="none" checked>Full resolution</label>
                     <label for="pixellate2x2"><input type="radio" id="pixellate2x2" name="pixellate" value="2x2">Pixellate 2x2</label>
                     <label for="pixellate3x2"><input type="radio" id="pixellate3x2" name="pixellate" value="3x2">Pixellate 3x2</label>
@@ -347,18 +348,21 @@
         document.addEventListener('drop', handleDrop, false);
 
         document.getElementById("fixBrightness").onclick = onHueMatchClick;
+        document.getElementById("fixWhiteBalance").onclick = onHueMatchClick;
         document.getElementById("colourMatch").onclick = onHueMatchClick;
         document.getElementById("hueMatch").onclick = onHueMatchClick;
         document.getElementById("saturationMatch").onclick = onHueMatchClick;
         document.getElementById("lightnessMatch").onclick = onHueMatchClick;
 
         let isFixBrightness;
+        let isfixWhiteBalance;
         let isColourMatch;
         let isHueMatch;
         let isSaturationMatch;
         let isLightnessMatch;
         function onHueMatchClick() {
-            isFixBrightness = document.getElementById("fixBrightness").checked;
+                isFixBrightness = document.getElementById("fixBrightness").checked;
+            isfixWhiteBalance = document.getElementById("fixWhiteBalance").checked;
             isColourMatch = document.getElementById("colourMatch").checked;
             isHueMatch = document.getElementById("hueMatch").checked;
             isSaturationMatch = document.getElementById("saturationMatch").checked;
@@ -1344,9 +1348,13 @@
                 }
             }
             
-            let minimumAdjust = 0;
-            let rangeAdjust = 1;
-            if (isFixBrightness) {
+            let minimumAdjustR = 0;
+            let rangeAdjustR = 1;
+            let minimumAdjustG = 0;
+            let rangeAdjustG = 1;
+            let minimumAdjustB = 0;
+            let rangeAdjustB = 1;
+            if (isFixBrightness || isfixWhiteBalance) {
                 let rMax = 0;
                 let rMin = 255;
                 let gMax = 0;
@@ -1369,13 +1377,34 @@
                         if (b < bMin) bMin = b;
                     }
                 }
-                const min = Math.min(rMin, gMin, bMin);
-                const max = Math.max(rMax, gMax, bMax);
-                const range = max - min;
-                minimumAdjust = min;
-                rangeAdjust = 255 / range;
+                if (isfixWhiteBalance) {
+                    let targetMin = 0;
+                    let targetMax = 255;
+                    if (!isFixBrightness) {
+                        targetMin = Math.min(rMin, gMin, bMin);
+                        targetMax = Math.max(rMax, gMax, bMax);
+                    }
+                    targetRange = targetMax - targetMin;
+                    minimumAdjustR = rMin - targetMin;
+                    rangeAdjustR = targetRange / (rMax - rMin);
+                    minimumAdjustG = gMin - targetMin;
+                    rangeAdjustG = targetRange / (gMax - gMin);
+                    minimumAdjustB = bMin - targetMin;
+                    rangeAdjustB = targetRange / (bMax - bMin);
+                } else {
+                    const min = Math.min(rMin, gMin, bMin);
+                    const max = Math.max(rMax, gMax, bMax);
+                    const range = max - min;
+                    const minimumAdjust = min;
+                    const rangeAdjust = 255 / range;
+                    minimumAdjustR = minimumAdjust;
+                    rangeAdjustR = rangeAdjust;
+                    minimumAdjustG = minimumAdjust;
+                    rangeAdjustG = rangeAdjust;
+                    minimumAdjustB = minimumAdjust;
+                    rangeAdjustB = rangeAdjust;
+                }
             }
-            
 
             // Convert to colour buffer
             // (51 colour palette by default, or 7 if a gradient is selected)
@@ -1410,10 +1439,10 @@
                         let r = rImg / aImg;
                         let g = gImg / aImg;
                         let b = bImg / aImg;
-                        if (isFixBrightness) {
-                            r = (r - minimumAdjust) * rangeAdjust;
-                            g = (g - minimumAdjust) * rangeAdjust;
-                            b = (b - minimumAdjust) * rangeAdjust;
+                        if (isFixBrightness || isfixWhiteBalance) {
+                            r = (r - minimumAdjustR) * rangeAdjustR;
+                            g = (g - minimumAdjustG) * rangeAdjustG;
+                            b = (b - minimumAdjustB) * rangeAdjustB;
                         }
                         colourIndex = rgbToNearestPaletteColour(r, g, b, colourSet);
                     }
