@@ -563,9 +563,9 @@
                 const y = index >>> 5 & 1;
 
                 const colour = [
-                    Math.floor(Math.min(255, xPrime * r + xSecondary * m + xSecondary * y)),
-                    Math.floor(Math.min(255, xPrime * g + xSecondary * y + xSecondary * c)),
-                    Math.floor(Math.min(255, xPrime * b + xSecondary * c + xSecondary * m))
+                    linearToSrgbChannel(xPrime * r + xSecondary * m + xSecondary * y),
+                    linearToSrgbChannel(xPrime * g + xSecondary * y + xSecondary * c),
+                    linearToSrgbChannel(xPrime * b + xSecondary * c + xSecondary * m)
                 ];
                 const hsl = rgbToHsl(colour[0], colour[1], colour[2]);
                 colours.push({
@@ -2061,6 +2061,16 @@
             renderBlur(data);
         }
 
+        function linearToSrgbChannel(x) {
+            x = x / 255;
+            if (x <= 0.0031308) {
+                x = x * 12.92;
+            } else {
+                x = 1.055 * Math.pow(x, 1.0 / 2.4) - 0.055;
+            }
+            return Math.floor(Math.max(0, Math.min(255, x * 255)));
+        }
+
         function renderBlur(data1) {
             const canvas = document.getElementById("blur");
             canvas.width = width;
@@ -2095,9 +2105,9 @@
                     b += data1[idx3 + 2];
                     a += data1[idx3 + 3];
                     
-                    data[idx] = r * .25;
-                    data[idx + 1] = g * .25;
-                    data[idx + 2] = b * .25;
+                    data[idx] = linearToSrgbChannel(r * .25);
+                    data[idx + 1] = linearToSrgbChannel(g * .25);
+                    data[idx + 2] = linearToSrgbChannel(b * .25);
                     data[idx + 3] = a * .25;
                 }
             }
