@@ -1781,9 +1781,9 @@
                 width = upng.width;
                 height = upng.height;
             } else {
-                function chooseResize(width, height) {
+                function chooseResize(width, height, forceResize) {
                     if (!resizeOnLoad) return null;
-                    if (width <= 420 && height <= 672) return null;
+                    if (width <= 420 && height <= 672) return forceResize ? { resizeWidth: width,  resizeHeight: height } : null;
                     const ratio = width * 672 / 420 / height;
                     if (ratio >= 1) {
                         return { resizeWidth: 420 };
@@ -1797,7 +1797,7 @@
                     const image = new Image();
                     image.src = svgUrl;
                     await image.decode();
-                    let resize = chooseResize(image.width, image.height);
+                    let resize = chooseResize(image.width, image.height, true);
                     otherImage = await createImageBitmap(image, resize);
                     URL.revokeObjectURL(svgUrl);
                 } else {
